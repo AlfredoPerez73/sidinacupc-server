@@ -1,0 +1,119 @@
+from flask import Blueprint, request, jsonify
+from models.estudiante import Estudiante
+from db.db import serialize_doc, serialize_list
+from middlewares.auth import token_required
+import json
+
+estudiantes_bp = Blueprint('estudiantes', __name__)
+
+@estudiantes_bp.route('/', methods=['GET'])
+@token_required
+def get_estudiantes(current_user):
+    """Obtiene la lista de estudiantes"""
+    page = int(request.args.get('page', 1))
+    per_page = int(request.args.get('per_page', 10))
+    
+    # Procesar filtros
+    filters = {}
+    if 'nombre' in request.args:
+        filters['nombre_completo'] = {'$regex': request.args.get('nombre'), '$options': 'i'}
+    if 'programa' in request.args:
+        filters['programa_academico'] = request.args.get('programa')
+    if 'facultad' in request.args:
+        filters['facultad'] = request.args.get('facultad')
+    if 'estado' in request.args:
+        filters['estado'] = request.args.get('estado')
+    
+    result = Estudiante.get_all(filters, page, per_page)
+    
+    return jsonify({
+        'estudiantes': serialize_list(result['estudiantes']),
+        'total': result['total'],
+        'page': result['page'],
+        'per_page': result['per_page'],
+        'pages': result['pages']
+    })
+
+@estudiantes_bp.route('/<estudiante_id>', methods=['GET'])
+@token_required
+def get_estudiante(current_user, estudiante_id):
+    """Obtiene un estudiante por su ID"""
+    estudiante = Estudiante.get_by_id(estudiante_id)
+    
+    if not estudiante:
+        return jsonify({'message': 'Estudiante no encontrado'}), 404
+    
+    return jsonify(serialize_doc(estudiante))
+
+@estudiantes_bp.route('/', methods=['POST'])
+@token_required
+def create_estudiante(current_user):
+    """Crea un nuevo estudiante"""
+    data = request.json
+    
+    # Validar datos requeridos
+    required_fields = ['nombre_completo', 'programa_academico', 'facultad', 
+                        'documento_identidad', 'tipo_documento', 'email']
+    
+    for field in required_fields:
+        if field not in data or not data[field]:
+            return jsonify({'message': f'El campo {field} es requerido'}), 400
+    
+    # Verificar si ya existe un estudiante con el mismo documento
+    existing = Estudiante.get_by_documento(data['documento_identidad'])
+    if existing:
+        return jsonify({'message': 'Ya existe un estudiante con este documento de identidad'}), 400
+    
+    # Crear el estudiante
+    estudiante_id = Estudiante.create(data)
+    
+    return jsonify({
+        'message': 'Estudiante creado exitosamente',
+        'estudiante_id': estudiante_id
+    }), 201
+
+@estudiantes_bp.route('/<estudiante_id>', methods=['PUT'])
+@token_required
+def update_estudiante(current_user, estudiante_id):
+    """Actualiza un estudiante existente"""
+    data = request.json
+    
+    estudiante = Estudiante.get_by_id(estudiante_id)
+    if not estudiante:
+        return jsonify({'message': 'Estudiante no encontrado'}), 404
+    
+    updated = Estudiante.update(estudiante_id, data)
+    
+    return jsonify({
+        'message': 'Estudiante actualizado exitosamente',
+        'estudiante': serialize_doc(updated)
+    })
+
+@estudiantes_bp.route('/<estudiante_id>', methods=['DELETE'])
+@token_required
+def delete_estudiante(current_user, estudiante_id):
+    """Elimina un estudiante (cambio de estado a inactivo)"""
+    estudiante = Estudiante.get_by_id(estudiante_id)
+    if not estudiante:
+        return jsonify({'message': 'Estudiante no encontrado'}), 404
+    
+    Estudiante.delete(estudiante_id)
+    
+    return jsonify({
+        'message': 'Estudiante eliminado exitosamente'
+    })
+
+@estudiantes_bp.route('/<estudiante_id>/requisitos-intercambio', methods=['GET'])
+@token_required
+def verificar_requisitos(current_user, estudiante_id):
+    """Verifica si un estudiante cumple con los requisitos para intercambio"""
+    estudiante = Estudiante.get_by_id(estudiante_id)
+    if not estudiante:
+        return jsonify({'message': 'Estudiante no encontrado'}), 404
+    
+    cumple, mensaje = Estudiante.cumple_requisitos_intercambio(estudiante_id)
+    
+    return jsonify({
+        'cumple_requisitos': cumple,
+        'mensaje': mensaje
+    })

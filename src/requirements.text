@@ -1,0 +1,11 @@
+Flask
+flask-cors
+pymongo
+python-dotenv
+pyjwt
+bcrypt
+Flask-PyMongo
+bson
+python-dateutil
+Werkzeug
+gunicorn

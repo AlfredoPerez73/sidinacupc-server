@@ -1,15 +1,15 @@
 from flask import Flask
 from flask_cors import CORS
 from src.config import Config
-from db.db import initialize_db
-from routes.auth_routes import auth_bp
-from routes.estudiante_routes import estudiantes_bp
-from routes.convenio_routes import convenios_bp
-from routes.solicitud_routes import solicitudes_bp
-from routes.asignatura_routes import asignaturas_bp
-from routes.seguimiento_routes import seguimiento_bp
-from routes.resultado_routes import resultados_bp
-from routes.reportes_routes import reportes_bp
+from src.db.db import initialize_db
+from src.routes.auth_routes import auth_bp
+from src.routes.estudiante_routes import estudiantes_bp
+from src.routes.convenio_routes import convenios_bp
+from src.routes.solicitud_routes import solicitudes_bp
+from src.routes.asignatura_routes import asignaturas_bp
+from src.routes.seguimiento_routes import seguimiento_bp
+from src.routes.resultado_routes import resultados_bp
+from src.routes.reportes_routes import reportes_bp
 import os
 
 def create_app():

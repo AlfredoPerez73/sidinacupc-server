@@ -1,6 +1,6 @@
 from flask import Flask
 from flask_cors import CORS
-from config import Config
+from src.config import Config
 from db.db import initialize_db
 from routes.auth_routes import auth_bp
 from routes.estudiante_routes import estudiantes_bp

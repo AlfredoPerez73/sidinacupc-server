@@ -1,5 +1,5 @@
+import pandas as pd
 from models.estudiante import Estudiante
-from bson import ObjectId
 from db.db import serialize_doc, serialize_list
 
 class EstudianteService:
@@ -14,6 +14,71 @@ class EstudianteService:
             'per_page': result['per_page'],
             'pages': result['pages']
         }
+    
+    @staticmethod
+    def importar_csv(archivo_csv):
+        try:
+            # Leer el archivo CSV
+            df = pd.read_csv(archivo_csv)
+            
+            # Validar estructura del CSV
+            campos_requeridos = ['nombre_completo', 'documento_identidad', 'programa_academico']
+            for campo in campos_requeridos:
+                if campo not in df.columns:
+                    return None, f"El campo {campo} es requerido en el CSV"
+            
+            # Procesar cada registro
+            resultados = []
+            errores = []
+            
+            for index, row in df.iterrows():
+                try:
+                    # Verificar si ya existe un estudiante con el mismo documento
+                    existing = Estudiante.get_by_documento(str(row['documento_identidad']))
+                    if existing:
+                        errores.append({
+                            'fila': index + 2,
+                            'error': "Ya existe un estudiante con este documento de identidad",
+                            'datos': row.to_dict()
+                        })
+                        continue
+                    
+                    # Crear estudiante
+                    estudiante_data = {
+                        'nombre_completo': row['nombre_completo'],
+                        'documento_identidad': str(row['documento_identidad']),
+                        'tipo_documento': row.get('tipo_documento', 'CC'),
+                        'programa_academico': row['programa_academico'],
+                        'facultad': row.get('facultad'),
+                        'email': row.get('email'),
+                        'telefono': str(row.get('telefono', '')),
+                        'creditos_cursados': float(row.get('creditos_cursados', 0)),
+                        'promedio_academico': float(row.get('promedio_academico', 0)),
+                        'estado': 'activo',
+                        'sanciones_academicas': False,
+                        'sanciones_disciplinarias': False
+                    }
+                    
+                    # Insertar en la base de datos
+                    estudiante_id = Estudiante.create(estudiante_data)
+                    resultados.append(estudiante_id)
+                    
+                except Exception as e:
+                    # Registrar error para este registro
+                    errores.append({
+                        'fila': index + 2,  # +2 por encabezado y base 0
+                        'error': str(e),
+                        'datos': row.to_dict()
+                    })
+            
+            return {
+                'total_importados': len(resultados),
+                'estudiantes_creados': resultados,
+                'errores': errores
+            }, "Estudiantes importados con éxito"
+        
+        except Exception as e:
+            return None, f"Error al procesar el archivo CSV: {str(e)}"
     
     @staticmethod
     def get_by_id(estudiante_id):
@@ -102,3 +167,4 @@ class EstudianteService:
             'per_page': result['per_page'],
             'pages': result['pages']
         }
+        

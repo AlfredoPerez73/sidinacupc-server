@@ -12,6 +12,44 @@ def allowed_file(filename):
     ALLOWED_EXTENSIONS = {'pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'}
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+@resultados_bp.route('/importar', methods=['POST'])
+@token_required
+def importar_resultados(current_user):
+    """Importa resultados desde un archivo CSV"""
+    # Verificar permisos
+    if current_user['rol'] not in ['admin', 'orpi']:
+        return jsonify({'message': 'No tiene permisos para realizar esta acción'}), 403
+    
+    # Verificar archivo
+    if 'file' not in request.files:
+        return jsonify({'message': 'No se encontró el archivo'}), 400
+    
+    # Verificar solicitud_id en formulario
+    if 'solicitud_id' not in request.form:
+        return jsonify({'message': 'Se requiere el ID de la solicitud'}), 400
+    
+    solicitud_id = request.form['solicitud_id']
+    file = request.files['file']
+    
+    # Obtener escala de origen (opcional)
+    escala_origen = request.form.get('escala_origen', '0-10')
+    
+    if file.filename == '' or not file.filename.endswith('.csv'):
+        return jsonify({'message': 'Archivo no válido. Debe ser un CSV'}), 400
+    
+    # Procesar archivo
+    result, message = ResultadoService.importar_csv(file, solicitud_id, escala_origen)
+    
+    if not result:
+        return jsonify({'message': message}), 400
+    
+    return jsonify({
+        'message': message,
+        'total_importados': result['total_importados'],
+        'resultados_creados': result['resultados_creados'],
+        'errores': result['errores']
+    })
+
 @resultados_bp.route('/<resultado_id>', methods=['GET'])
 @token_required
 def get_resultado(current_user, resultado_id):

@@ -1,3 +1,5 @@
+import pandas as pd
+from datetime import datetime
 from models.convenio import Convenio
 from db.db import serialize_doc, serialize_list
 
@@ -13,6 +15,76 @@ class ConvenioService:
             'per_page': result['per_page'],
             'pages': result['pages']
         }
+        
+    @staticmethod
+    def importar_csv(archivo_csv):
+        try:
+            # Leer el archivo CSV
+            df = pd.read_csv(archivo_csv)
+            
+            # Validar estructura del CSV
+            campos_requeridos = ['nombre_institucion', 'pais_institucion', 'tipo_convenio', 'fecha_inicio', 'fecha_fin']
+            for campo in campos_requeridos:
+                if campo not in df.columns:
+                    return None, f"El campo {campo} es requerido en el CSV"
+            
+            # Procesar cada registro
+            resultados = []
+            errores = []
+            
+            for index, row in df.iterrows():
+                try:
+                    # Convertir fechas
+                    try:
+                        fecha_inicio = datetime.strptime(row['fecha_inicio'], '%Y-%m-%d')
+                        fecha_fin = datetime.strptime(row['fecha_fin'], '%Y-%m-%d')
+                    except ValueError:
+                        raise ValueError("Formato de fecha incorrecto. Use YYYY-MM-DD")
+                    
+                    # Crear convenio
+                    convenio_data = {
+                        'nombre_institucion': row['nombre_institucion'],
+                        'pais_institucion': row['pais_institucion'],
+                        'ciudad_institucion': row.get('ciudad_institucion', ''),
+                        'tipo_convenio': row['tipo_convenio'],
+                        'fecha_inicio': fecha_inicio,
+                        'fecha_fin': fecha_fin,
+                        'estado': row.get('estado', 'activo'),
+                        'descripcion': row.get('descripcion', ''),
+                        'requisitos_especificos': row.get('requisitos_especificos', ''),
+                        'beneficios': row.get('beneficios', ''),
+                        'cupos_disponibles': int(row.get('cupos_disponibles', 0))
+                    }
+                    
+                    # Si hay datos de contacto
+                    if 'contacto_nombre' in row and row['contacto_nombre']:
+                        convenio_data['contacto_institucion'] = {
+                            'nombre': row['contacto_nombre'],
+                            'cargo': row.get('contacto_cargo', ''),
+                            'email': row.get('contacto_email', ''),
+                            'telefono': row.get('contacto_telefono', '')
+                        }
+                    
+                    # Insertar en la base de datos
+                    convenio_id = Convenio.create(convenio_data)
+                    resultados.append(convenio_id)
+                    
+                except Exception as e:
+                    # Registrar error para este registro
+                    errores.append({
+                        'fila': index + 2,
+                        'error': str(e),
+                        'datos': row.to_dict()
+                    })
+            
+            return {
+                'total_importados': len(resultados),
+                'convenios_creados': resultados,
+                'errores': errores
+            }, "Convenios importados con éxito"
+        
+        except Exception as e:
+            return None, f"Error al procesar el archivo CSV: {str(e)}"
     
     @staticmethod
     def get_by_id(convenio_id):

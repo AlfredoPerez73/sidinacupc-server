@@ -15,6 +15,41 @@ def get_asignatura(current_user, asignatura_id):
     
     return jsonify(asignatura)
 
+@asignaturas_bp.route('/importar', methods=['POST'])
+@token_required
+def importar_asignaturas(current_user):
+    """Importa asignaturas desde un archivo CSV"""
+    # Verificar permisos
+    if current_user['rol'] not in ['admin', 'orpi', 'jefe_programa']:
+        return jsonify({'message': 'No tiene permisos para realizar esta acción'}), 403
+    
+    # Verificar archivo
+    if 'file' not in request.files:
+        return jsonify({'message': 'No se encontró el archivo'}), 400
+    
+    # Verificar solicitud_id en formulario
+    if 'solicitud_id' not in request.form:
+        return jsonify({'message': 'Se requiere el ID de la solicitud'}), 400
+    
+    solicitud_id = request.form['solicitud_id']
+    file = request.files['file']
+    
+    if file.filename == '' or not file.filename.endswith('.csv'):
+        return jsonify({'message': 'Archivo no válido. Debe ser un CSV'}), 400
+    
+    # Procesar archivo
+    result, message = AsignaturaService.importar_csv(file, solicitud_id)
+    
+    if not result:
+        return jsonify({'message': message}), 400
+    
+    return jsonify({
+        'message': message,
+        'total_importados': result['total_importados'],
+        'asignaturas_creadas': result['asignaturas_creadas'],
+        'errores': result['errores']
+    })
+
 @asignaturas_bp.route('/solicitud/<solicitud_id>', methods=['GET'])
 @token_required
 def get_asignaturas_solicitud(current_user, solicitud_id):

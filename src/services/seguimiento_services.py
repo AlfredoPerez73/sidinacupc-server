@@ -1,7 +1,8 @@
+import pandas as pd
+from datetime import datetime
 from models.seguimiento import Seguimiento
 from models.solicitud import Solicitud
-from db.db import serialize_doc, serialize_list
-from bson import ObjectId
+from db.db import serialize_doc
 
 class SeguimientoService:
     @staticmethod
@@ -10,6 +11,55 @@ class SeguimientoService:
         seguimiento = Seguimiento.get_by_id(seguimiento_id)
         return serialize_doc(seguimiento)
     
+    @staticmethod
+    def importar_reportes_csv(archivo_csv, seguimiento_id):
+        try:
+            # Verificar si existe el seguimiento
+            seguimiento = Seguimiento.get_by_id(seguimiento_id)
+            if not seguimiento:
+                return None, "Seguimiento no encontrado"
+            
+            # Leer el archivo CSV
+            df = pd.read_csv(archivo_csv)
+            
+            # Validar estructura del CSV
+            if 'contenido' not in df.columns:
+                return None, "El campo contenido es requerido en el CSV"
+            
+            # Procesar cada registro
+            resultados = []
+            errores = []
+            
+            for index, row in df.iterrows():
+                try:
+                    # Crear reporte
+                    reporte = {
+                        'contenido': row['contenido'],
+                        'fecha': datetime.now(),
+                        'usuario': row.get('usuario', 'Sistema')
+                    }
+                    
+                    # Insertar en el seguimiento
+                    updated = Seguimiento.agregar_reporte(seguimiento_id, reporte)
+                    resultados.append(index)
+                    
+                except Exception as e:
+                    # Registrar error para este registro
+                    errores.append({
+                        'fila': index + 2,
+                        'error': str(e),
+                        'datos': row.to_dict()
+                    })
+            
+            return {
+                'total_importados': len(resultados),
+                'reportes_creados': resultados,
+                'errores': errores
+            }, "Reportes importados con éxito"
+        
+        except Exception as e:
+            return None, f"Error al procesar el archivo CSV: {str(e)}"
+        
     @staticmethod
     def get_by_solicitud(solicitud_id):
         """Obtiene el seguimiento para una solicitud específica"""

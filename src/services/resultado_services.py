@@ -1,9 +1,8 @@
+import pandas as pd
 from models.resultado import Resultado
 from models.solicitud import Solicitud
 from models.asignatura import Asignatura
-from models.estudiante import Estudiante
-from db.db import serialize_doc, serialize_list
-from bson import ObjectId
+from db.db import serialize_doc
 
 class ResultadoService:
     @staticmethod
@@ -11,6 +10,108 @@ class ResultadoService:
         """Obtiene un resultado por su ID"""
         resultado = Resultado.get_by_id(resultado_id)
         return serialize_doc(resultado)
+    
+    @staticmethod
+    def importar_csv(archivo_csv, solicitud_id, escala_origen='0-10'):
+        try:
+            # Verificar si existe la solicitud
+            solicitud = Solicitud.get_by_id(solicitud_id)
+            if not solicitud:
+                return None, "Solicitud no encontrada"
+            
+            # Leer el archivo CSV
+            df = pd.read_csv(archivo_csv)
+            
+            # Validar estructura del CSV
+            if 'codigo_asignatura' in df.columns:
+                # Format 1: Usando código de asignatura
+                modo = 'codigo'
+                if 'nota_obtenida' not in df.columns:
+                    return None, "El campo nota_obtenida es requerido en el CSV"
+            elif 'asignatura_id' in df.columns:
+                # Format 2: Usando ID de asignatura
+                modo = 'id'
+                if 'nota_obtenida' not in df.columns:
+                    return None, "El campo nota_obtenida es requerido en el CSV"
+            else:
+                return None, "Se requiere el campo codigo_asignatura o asignatura_id en el CSV"
+            
+            # Procesar cada registro
+            resultados = []
+            errores = []
+            
+            for index, row in df.iterrows():
+                try:
+                    # Buscar la asignatura
+                    asignatura = None
+                    if modo == 'codigo':
+                        # Buscar por código
+                        asignaturas = Asignatura.get_by_solicitud(solicitud_id)
+                        for a in asignaturas:
+                            if a['codigo_asignatura_origen'] == row['codigo_asignatura']:
+                                asignatura = a
+                                break
+                        
+                        if not asignatura:
+                            raise ValueError(f"No se encontró asignatura con código {row['codigo_asignatura']}")
+                        
+                        asignatura_id = str(asignatura['_id'])
+                    else:
+                        # Usar ID directamente
+                        asignatura_id = row['asignatura_id']
+                        asignatura = Asignatura.get_by_id(asignatura_id)
+                        
+                        if not asignatura:
+                            raise ValueError(f"No se encontró asignatura con ID {asignatura_id}")
+                    
+                    # Verificar que la asignatura pertenezca a la solicitud
+                    if str(asignatura['solicitud_id']) != solicitud_id:
+                        raise ValueError("La asignatura no pertenece a esta solicitud")
+                    
+                    # Verificar si ya existe un resultado para esta asignatura
+                    existing = Resultado.get_by_asignatura(asignatura_id)
+                    if existing:
+                        errores.append({
+                            'fila': index + 2,
+                            'error': "Ya existe un resultado para esta asignatura",
+                            'datos': row.to_dict()
+                        })
+                        continue
+                    
+                    # Crear resultado
+                    nota_obtenida = float(row['nota_obtenida'])
+                    nota_convertida = Resultado.convertir_nota(nota_obtenida, escala_origen)
+                    
+                    resultado_data = {
+                        'solicitud_id': solicitud_id,
+                        'asignatura_id': asignatura_id,
+                        'nota_obtenida': nota_obtenida,
+                        'nota_convertida': nota_convertida,
+                        'escala_origen': escala_origen,
+                        'estado_homologacion': 'pendiente',
+                        'observaciones': row.get('observaciones', '')
+                    }
+                    
+                    # Insertar en la base de datos
+                    resultado_id = Resultado.create(resultado_data)
+                    resultados.append(resultado_id)
+                    
+                except Exception as e:
+                    # Registrar error para este registro
+                    errores.append({
+                        'fila': index + 2,
+                        'error': str(e),
+                        'datos': row.to_dict()
+                    })
+            
+            return {
+                'total_importados': len(resultados),
+                'resultados_creados': resultados,
+                'errores': errores
+            }, "Resultados importados con éxito"
+        
+        except Exception as e:
+            return None, f"Error al procesar el archivo CSV: {str(e)}"
     
     @staticmethod
     def get_by_solicitud(solicitud_id):

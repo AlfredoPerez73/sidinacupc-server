@@ -1,8 +1,9 @@
 from flask import Blueprint, request, jsonify
 from models.estudiante import Estudiante
+from services.estudiante_services import EstudianteService
 from db.db import serialize_doc, serialize_list
 from middlewares.auth import token_required
-import json
+
 
 estudiantes_bp = Blueprint('estudiantes', __name__)
 
@@ -32,6 +33,35 @@ def get_estudiantes(current_user):
         'page': result['page'],
         'per_page': result['per_page'],
         'pages': result['pages']
+    })
+    
+@estudiantes_bp.route('/importar', methods=['POST'])
+@token_required
+def importar_estudiantes(current_user):
+    # Verificar permisos (solo administradores)
+    if current_user['rol'] != 'admin':
+        return jsonify({'message': 'No tiene permisos para realizar esta acción'}), 403
+    
+    # Verificar archivo
+    if 'file' not in request.files:
+        return jsonify({'message': 'No se encontró el archivo'}), 400
+    
+    file = request.files['file']
+    
+    if file.filename == '' or not file.filename.endswith('.csv'):
+        return jsonify({'message': 'Archivo no válido. Debe ser un CSV'}), 400
+    
+    # Procesar archivo
+    result, message = EstudianteService.importar_csv(file)
+    
+    if not result:
+        return jsonify({'message': message}), 400
+    
+    return jsonify({
+        'message': message,
+        'total_importados': result['total_importados'],
+        'estudiantes_creados': result['estudiantes_creados'],
+        'errores': result['errores']
     })
 
 @estudiantes_bp.route('/<estudiante_id>', methods=['GET'])

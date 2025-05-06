@@ -16,6 +16,41 @@ def allowed_file(filename):
     ALLOWED_EXTENSIONS = {'pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'}
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+@seguimiento_bp.route('/importarReportes', methods=['POST'])
+@token_required
+def importar_reportes(current_user):
+    """Importa reportes de seguimiento desde un archivo CSV"""
+    # Verificar permisos
+    if current_user['rol'] not in ['admin', 'orpi']:
+        return jsonify({'message': 'No tiene permisos para realizar esta acción'}), 403
+    
+    # Verificar archivo
+    if 'file' not in request.files:
+        return jsonify({'message': 'No se encontró el archivo'}), 400
+    
+    # Verificar seguimiento_id en formulario
+    if 'seguimiento_id' not in request.form:
+        return jsonify({'message': 'Se requiere el ID del seguimiento'}), 400
+    
+    seguimiento_id = request.form['seguimiento_id']
+    file = request.files['file']
+    
+    if file.filename == '' or not file.filename.endswith('.csv'):
+        return jsonify({'message': 'Archivo no válido. Debe ser un CSV'}), 400
+    
+    # Procesar archivo
+    result, message = SeguimientoService.importar_reportes_csv(file, seguimiento_id)
+    
+    if not result:
+        return jsonify({'message': message}), 400
+    
+    return jsonify({
+        'message': message,
+        'total_importados': result['total_importados'],
+        'reportes_creados': result['reportes_creados'],
+        'errores': result['errores']
+    })
+
 @seguimiento_bp.route('/<seguimiento_id>', methods=['GET'])
 @token_required
 def get_seguimiento(current_user, seguimiento_id):

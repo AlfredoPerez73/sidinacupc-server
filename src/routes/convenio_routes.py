@@ -26,6 +26,36 @@ def get_convenios(current_user):
     
     return jsonify(result)
 
+@convenios_bp.route('/importar', methods=['POST'])
+@token_required
+def importar_convenios(current_user):
+    """Importa convenios desde un archivo CSV"""
+    # Verificar permisos (solo administradores)
+    if current_user['rol'] != 'admin':
+        return jsonify({'message': 'No tiene permisos para realizar esta acción'}), 403
+    
+    # Verificar archivo
+    if 'convenios' not in request.files:
+        return jsonify({'message': 'No se encontró el archivo'}), 400
+    
+    file = request.files['convenios']
+    
+    if file.filename == '' or not file.filename.endswith('.csv'):
+        return jsonify({'message': 'Archivo no válido. Debe ser un CSV'}), 400
+    
+    # Procesar archivo
+    result, message = ConvenioService.importar_csv(file)
+    
+    if not result:
+        return jsonify({'message': message}), 400
+    
+    return jsonify({
+        'message': message,
+        'total_importados': result['total_importados'],
+        'convenios_creados': result['convenios_creados'],
+        'errores': result['errores']
+    })
+
 @convenios_bp.route('/<convenio_id>', methods=['GET'])
 @token_required
 def get_convenio(current_user, convenio_id):

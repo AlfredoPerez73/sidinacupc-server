@@ -1,7 +1,7 @@
+import pandas as pd
 from models.asignatura import Asignatura
 from models.solicitud import Solicitud
 from db.db import serialize_doc, serialize_list
-from bson import ObjectId
 
 class AsignaturaService:
     @staticmethod
@@ -9,6 +9,66 @@ class AsignaturaService:
         """Obtiene una asignatura por su ID"""
         asignatura = Asignatura.get_by_id(asignatura_id)
         return serialize_doc(asignatura)
+    
+    @staticmethod
+    def importar_csv(archivo_csv, solicitud_id):
+        try:
+            # Verificar si existe la solicitud
+            solicitud = Solicitud.get_by_id(solicitud_id)
+            if not solicitud:
+                return None, "Solicitud no encontrada"
+            
+            # Leer el archivo CSV
+            df = pd.read_csv(archivo_csv)
+            
+            # Validar estructura del CSV
+            campos_requeridos = [
+                'codigo_asignatura_origen', 'nombre_asignatura_origen', 'creditos_asignatura_origen',
+                'codigo_asignatura_destino', 'nombre_asignatura_destino', 'creditos_asignatura_destino'
+            ]
+            for campo in campos_requeridos:
+                if campo not in df.columns:
+                    return None, f"El campo {campo} es requerido en el CSV"
+            
+            # Procesar cada registro
+            resultados = []
+            errores = []
+            
+            for index, row in df.iterrows():
+                try:
+                    # Crear asignatura
+                    asignatura_data = {
+                        'solicitud_id': solicitud_id,
+                        'codigo_asignatura_origen': row['codigo_asignatura_origen'],
+                        'nombre_asignatura_origen': row['nombre_asignatura_origen'],
+                        'creditos_asignatura_origen': float(row['creditos_asignatura_origen']),
+                        'codigo_asignatura_destino': row['codigo_asignatura_destino'],
+                        'nombre_asignatura_destino': row['nombre_asignatura_destino'],
+                        'creditos_asignatura_destino': float(row['creditos_asignatura_destino']),
+                        'estado_equivalencia': 'propuesta',
+                        'observaciones': row.get('observaciones', '')
+                    }
+                    
+                    # Insertar en la base de datos
+                    asignatura_id = Asignatura.create(asignatura_data)
+                    resultados.append(asignatura_id)
+                    
+                except Exception as e:
+                    # Registrar error para este registro
+                    errores.append({
+                        'fila': index + 2,
+                        'error': str(e),
+                        'datos': row.to_dict()
+                    })
+            
+            return {
+                'total_importados': len(resultados),
+                'asignaturas_creadas': resultados,
+                'errores': errores
+            }, "Asignaturas importadas con éxito"
+        
+        except Exception as e:
+            return None, f"Error al procesar el archivo CSV: {str(e)}"
     
     @staticmethod
     def get_by_solicitud(solicitud_id):

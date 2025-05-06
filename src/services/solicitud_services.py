@@ -1,3 +1,4 @@
+import pandas as pd
 from models.solicitud import Solicitud
 from models.estudiante import Estudiante
 from models.convenio import Convenio
@@ -44,6 +45,85 @@ class SolicitudService:
             'per_page': result['per_page'],
             'pages': result['pages']
         }
+        
+    @staticmethod
+    def importar_csv(archivo_csv):
+        try:
+            # Leer el archivo CSV
+            df = pd.read_csv(archivo_csv)
+            
+            # Validar estructura del CSV
+            campos_requeridos = [
+                'estudiante_id', 'convenio_id', 'periodo_academico',
+                'modalidad', 'tipo_intercambio', 'duracion'
+            ]
+            for campo in campos_requeridos:
+                if campo not in df.columns:
+                    return None, f"El campo {campo} es requerido en el CSV"
+            
+            # Procesar cada registro
+            resultados = []
+            errores = []
+            
+            for index, row in df.iterrows():
+                try:
+                    # Verificar si existe el estudiante
+                    estudiante_id = row['estudiante_id']
+                    estudiante = Estudiante.get_by_id(estudiante_id)
+                    
+                    if not estudiante:
+                        # Verificar si es un documento en lugar de ID
+                        if estudiante_id.isdigit() or (isinstance(estudiante_id, str) and len(estudiante_id) < 15):
+                            estudiante = Estudiante.get_by_documento(str(estudiante_id))
+                            if estudiante:
+                                estudiante_id = str(estudiante['_id'])
+                    
+                    if not estudiante:
+                        raise ValueError(f"Estudiante no encontrado: {estudiante_id}")
+                    
+                    # Verificar si existe el convenio
+                    convenio_id = row['convenio_id']
+                    convenio = Convenio.get_by_id(convenio_id)
+                    
+                    if not convenio:
+                        raise ValueError(f"Convenio no encontrado: {convenio_id}")
+                    
+                    # Verificar requisitos del estudiante
+                    cumple, mensaje = Estudiante.cumple_requisitos_intercambio(estudiante_id)
+                    if not cumple:
+                        raise ValueError(f"El estudiante no cumple requisitos: {mensaje}")
+                    
+                    # Crear solicitud
+                    solicitud_data = {
+                        'estudiante_id': estudiante_id,
+                        'convenio_id': convenio_id,
+                        'periodo_academico': row['periodo_academico'],
+                        'modalidad': row['modalidad'],
+                        'tipo_intercambio': row['tipo_intercambio'],
+                        'duracion': int(row['duracion']),
+                        'estado_solicitud': 'pendiente'
+                    }
+                    
+                    # Insertar en la base de datos
+                    solicitud_id = Solicitud.create(solicitud_data)
+                    resultados.append(solicitud_id)
+                    
+                except Exception as e:
+                    # Registrar error para este registro
+                    errores.append({
+                        'fila': index + 2,
+                        'error': str(e),
+                        'datos': row.to_dict()
+                    })
+            
+            return {
+                'total_importados': len(resultados),
+                'solicitudes_creadas': resultados,
+                'errores': errores
+            }, "Solicitudes importadas con éxito"
+        
+        except Exception as e:
+            return None, f"Error al procesar el archivo CSV: {str(e)}"
     
     @staticmethod
     def get_by_id(solicitud_id):

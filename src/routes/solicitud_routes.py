@@ -1,8 +1,9 @@
 from flask import Blueprint, request, jsonify, current_app
 from models.solicitud import Solicitud
 from models.estudiante import Estudiante
+from services.solicitud_services import SolicitudService
 from models.convenio import Convenio
-from db.db import serialize_doc, serialize_list
+from db.db import serialize_doc
 from middlewares.auth import token_required
 from bson import ObjectId
 import os
@@ -15,6 +16,36 @@ def allowed_file(filename):
     """Verifica si el archivo tiene una extensión permitida"""
     ALLOWED_EXTENSIONS = {'pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'}
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+@solicitudes_bp.route('/importar', methods=['POST'])
+@token_required
+def importar_solicitudes(current_user):
+    """Importa solicitudes desde un archivo CSV"""
+    # Verificar permisos (administradores o coordinadores ORPI)
+    if current_user['rol'] not in ['admin', 'orpi']:
+        return jsonify({'message': 'No tiene permisos para realizar esta acción'}), 403
+    
+    # Verificar archivo
+    if 'file' not in request.files:
+        return jsonify({'message': 'No se encontró el archivo'}), 400
+    
+    file = request.files['file']
+    
+    if file.filename == '' or not file.filename.endswith('.csv'):
+        return jsonify({'message': 'Archivo no válido. Debe ser un CSV'}), 400
+    
+    # Procesar archivo
+    result, message = SolicitudService.importar_csv(file)
+    
+    if not result:
+        return jsonify({'message': message}), 400
+    
+    return jsonify({
+        'message': message,
+        'total_importados': result['total_importados'],
+        'solicitudes_creadas': result['solicitudes_creados'],
+        'errores': result['errores']
+    })
 
 @solicitudes_bp.route('/', methods=['GET'])
 @token_required

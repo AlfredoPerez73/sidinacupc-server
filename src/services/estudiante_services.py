@@ -60,8 +60,8 @@ class EstudianteService:
                     }
                     
                     # Insertar en la base de datos
-                    estudiante_id = Estudiante.create(estudiante_data)
-                    resultados.append(estudiante_id)
+                    id_estudiante = Estudiante.create(estudiante_data)
+                    resultados.append(id_estudiante)
                     
                 except Exception as e:
                     # Registrar error para este registro
@@ -81,9 +81,9 @@ class EstudianteService:
             return None, f"Error al procesar el archivo CSV: {str(e)}"
     
     @staticmethod
-    def get_by_id(estudiante_id):
+    def get_by_id(id_estudiante):
         """Obtiene un estudiante por su ID"""
-        estudiante = Estudiante.get_by_id(estudiante_id)
+        estudiante = Estudiante.get_by_id(id_estudiante)
         return serialize_doc(estudiante)
     
     @staticmethod
@@ -100,46 +100,46 @@ class EstudianteService:
         if existing:
             return None, "Ya existe un estudiante con este documento de identidad"
         
-        estudiante_id = Estudiante.create(data)
-        return estudiante_id, "Estudiante creado exitosamente"
+        id_estudiante = Estudiante.create(data)
+        return id_estudiante, "Estudiante creado exitosamente"
     
     @staticmethod
-    def update(estudiante_id, data):
+    def update(id_estudiante, data):
         """Actualiza los datos de un estudiante"""
         # Verificar si existe el estudiante
-        estudiante = Estudiante.get_by_id(estudiante_id)
+        estudiante = Estudiante.get_by_id(id_estudiante)
         if not estudiante:
             return None, "Estudiante no encontrado"
         
         # Si se está actualizando el documento, verificar que no exista otro con ese documento
         if 'documento_identidad' in data:
             existing = Estudiante.get_by_documento(data['documento_identidad'])
-            if existing and str(existing['_id']) != estudiante_id:
+            if existing and str(existing['_id']) != id_estudiante:
                 return None, "Ya existe otro estudiante con este documento de identidad"
         
-        updated = Estudiante.update(estudiante_id, data)
+        updated = Estudiante.update(id_estudiante, data)
         return serialize_doc(updated), "Estudiante actualizado exitosamente"
     
     @staticmethod
-    def delete(estudiante_id):
+    def delete(id_estudiante):
         """Elimina un estudiante (cambia su estado a inactivo)"""
         # Verificar si existe el estudiante
-        estudiante = Estudiante.get_by_id(estudiante_id)
+        estudiante = Estudiante.get_by_id(id_estudiante)
         if not estudiante:
             return False, "Estudiante no encontrado"
         
-        Estudiante.delete(estudiante_id)
+        Estudiante.delete(id_estudiante)
         return True, "Estudiante eliminado exitosamente"
     
     @staticmethod
-    def verificar_requisitos(estudiante_id):
+    def verificar_requisitos(id_estudiante):
         """Verifica si un estudiante cumple con los requisitos para intercambio"""
         # Verificar si existe el estudiante
-        estudiante = Estudiante.get_by_id(estudiante_id)
+        estudiante = Estudiante.get_by_id(id_estudiante)
         if not estudiante:
             return False, "Estudiante no encontrado"
         
-        cumple, mensaje = Estudiante.cumple_requisitos_intercambio(estudiante_id)
+        cumple, mensaje = Estudiante.cumple_requisitos_intercambio(id_estudiante)
         return cumple, mensaje
     
     @staticmethod

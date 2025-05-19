@@ -64,11 +64,11 @@ def importar_estudiantes(current_user):
         'errores': result['errores']
     })
 
-@estudiantes_bp.route('/<estudiante_id>', methods=['GET'])
+@estudiantes_bp.route('/<id_estudiante>', methods=['GET'])
 @token_required
-def get_estudiante(current_user, estudiante_id):
+def get_estudiante(current_user, id_estudiante):
     """Obtiene un estudiante por su ID"""
-    estudiante = Estudiante.get_by_id(estudiante_id)
+    estudiante = Estudiante.get_by_id(id_estudiante)
     
     if not estudiante:
         return jsonify({'message': 'Estudiante no encontrado'}), 404
@@ -95,53 +95,53 @@ def create_estudiante(current_user):
         return jsonify({'message': 'Ya existe un estudiante con este documento de identidad'}), 400
     
     # Crear el estudiante
-    estudiante_id = Estudiante.create(data)
+    id_estudiante = Estudiante.create(data)
     
     return jsonify({
         'message': 'Estudiante creado exitosamente',
-        'estudiante_id': estudiante_id
+        'id_estudiante': id_estudiante
     }), 201
 
-@estudiantes_bp.route('/<estudiante_id>', methods=['PUT'])
+@estudiantes_bp.route('/<id_estudiante>', methods=['PUT'])
 @token_required
-def update_estudiante(current_user, estudiante_id):
+def update_estudiante(current_user, id_estudiante):
     """Actualiza un estudiante existente"""
     data = request.json
     
-    estudiante = Estudiante.get_by_id(estudiante_id)
+    estudiante = Estudiante.get_by_id(id_estudiante)
     if not estudiante:
         return jsonify({'message': 'Estudiante no encontrado'}), 404
     
-    updated = Estudiante.update(estudiante_id, data)
+    updated = Estudiante.update(id_estudiante, data)
     
     return jsonify({
         'message': 'Estudiante actualizado exitosamente',
         'estudiante': serialize_doc(updated)
     })
 
-@estudiantes_bp.route('/<estudiante_id>', methods=['DELETE'])
+@estudiantes_bp.route('/<id_estudiante>', methods=['DELETE'])
 @token_required
-def delete_estudiante(current_user, estudiante_id):
+def delete_estudiante(current_user, id_estudiante):
     """Elimina un estudiante (cambio de estado a inactivo)"""
-    estudiante = Estudiante.get_by_id(estudiante_id)
+    estudiante = Estudiante.get_by_id(id_estudiante)
     if not estudiante:
         return jsonify({'message': 'Estudiante no encontrado'}), 404
     
-    Estudiante.delete(estudiante_id)
+    Estudiante.delete(id_estudiante)
     
     return jsonify({
         'message': 'Estudiante eliminado exitosamente'
     })
 
-@estudiantes_bp.route('/<estudiante_id>/requisitos-intercambio', methods=['GET'])
+@estudiantes_bp.route('/<id_estudiante>/requisitos-intercambio', methods=['GET'])
 @token_required
-def verificar_requisitos(current_user, estudiante_id):
+def verificar_requisitos(current_user, id_estudiante):
     """Verifica si un estudiante cumple con los requisitos para intercambio"""
-    estudiante = Estudiante.get_by_id(estudiante_id)
+    estudiante = Estudiante.get_by_id(id_estudiante)
     if not estudiante:
         return jsonify({'message': 'Estudiante no encontrado'}), 404
     
-    cumple, mensaje = Estudiante.cumple_requisitos_intercambio(estudiante_id)
+    cumple, mensaje = Estudiante.cumple_requisitos_intercambio(id_estudiante)
     
     return jsonify({
         'cumple_requisitos': cumple,

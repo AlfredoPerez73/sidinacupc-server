@@ -28,27 +28,27 @@ class Convenio:
         return str(result.inserted_id)
     
     @staticmethod
-    def get_by_id(convenio_id):
+    def get_by_id(id_convenio):
         """Obtiene un convenio por su ID"""
-        return mongo.db.convenios.find_one({'_id': ObjectId(convenio_id)})
+        return mongo.db.convenios.find_one({'_id': ObjectId(id_convenio)})
     
     @staticmethod
-    def update(convenio_id, data):
+    def update(id_convenio, data):
         """Actualiza los datos de un convenio"""
         data['fecha_actualizacion'] = datetime.utcnow()
         
         mongo.db.convenios.update_one(
-            {'_id': ObjectId(convenio_id)},
+            {'_id': ObjectId(id_convenio)},
             {'$set': data}
         )
         
-        return Convenio.get_by_id(convenio_id)
+        return Convenio.get_by_id(id_convenio)
     
     @staticmethod
-    def delete(convenio_id):
+    def delete(id_convenio):
         """Elimina un convenio (cambio de estado a inactivo)"""
         mongo.db.convenios.update_one(
-            {'_id': ObjectId(convenio_id)},
+            {'_id': ObjectId(id_convenio)},
             {'$set': {'estado': 'inactivo', 'fecha_actualizacion': datetime.utcnow()}}
         )
         

@@ -6,16 +6,16 @@ from db.db import serialize_doc
 
 class ResultadoService:
     @staticmethod
-    def get_by_id(resultado_id):
+    def get_by_id(id_resultado):
         """Obtiene un resultado por su ID"""
-        resultado = Resultado.get_by_id(resultado_id)
+        resultado = Resultado.get_by_id(id_resultado)
         return serialize_doc(resultado)
     
     @staticmethod
-    def importar_csv(archivo_csv, solicitud_id, escala_origen='0-10'):
+    def importar_csv(archivo_csv, id_solicitud, escala_origen='0-10'):
         try:
             # Verificar si existe la solicitud
-            solicitud = Solicitud.get_by_id(solicitud_id)
+            solicitud = Solicitud.get_by_id(id_solicitud)
             if not solicitud:
                 return None, "Solicitud no encontrada"
             
@@ -28,13 +28,13 @@ class ResultadoService:
                 modo = 'codigo'
                 if 'nota_obtenida' not in df.columns:
                     return None, "El campo nota_obtenida es requerido en el CSV"
-            elif 'asignatura_id' in df.columns:
+            elif 'id_asignatura' in df.columns:
                 # Format 2: Usando ID de asignatura
                 modo = 'id'
                 if 'nota_obtenida' not in df.columns:
                     return None, "El campo nota_obtenida es requerido en el CSV"
             else:
-                return None, "Se requiere el campo codigo_asignatura o asignatura_id en el CSV"
+                return None, "Se requiere el campo codigo_asignatura o id_asignatura en el CSV"
             
             # Procesar cada registro
             resultados = []
@@ -46,7 +46,7 @@ class ResultadoService:
                     asignatura = None
                     if modo == 'codigo':
                         # Buscar por código
-                        asignaturas = Asignatura.get_by_solicitud(solicitud_id)
+                        asignaturas = Asignatura.get_by_solicitud(id_solicitud)
                         for a in asignaturas:
                             if a['codigo_asignatura_origen'] == row['codigo_asignatura']:
                                 asignatura = a
@@ -55,21 +55,21 @@ class ResultadoService:
                         if not asignatura:
                             raise ValueError(f"No se encontró asignatura con código {row['codigo_asignatura']}")
                         
-                        asignatura_id = str(asignatura['_id'])
+                        id_asignatura = str(asignatura['_id'])
                     else:
                         # Usar ID directamente
-                        asignatura_id = row['asignatura_id']
-                        asignatura = Asignatura.get_by_id(asignatura_id)
+                        id_asignatura = row['id_asignatura']
+                        asignatura = Asignatura.get_by_id(id_asignatura)
                         
                         if not asignatura:
-                            raise ValueError(f"No se encontró asignatura con ID {asignatura_id}")
+                            raise ValueError(f"No se encontró asignatura con ID {id_asignatura}")
                     
                     # Verificar que la asignatura pertenezca a la solicitud
-                    if str(asignatura['solicitud_id']) != solicitud_id:
+                    if str(asignatura['id_solicitud']) != id_solicitud:
                         raise ValueError("La asignatura no pertenece a esta solicitud")
                     
                     # Verificar si ya existe un resultado para esta asignatura
-                    existing = Resultado.get_by_asignatura(asignatura_id)
+                    existing = Resultado.get_by_asignatura(id_asignatura)
                     if existing:
                         errores.append({
                             'fila': index + 2,
@@ -83,8 +83,8 @@ class ResultadoService:
                     nota_convertida = Resultado.convertir_nota(nota_obtenida, escala_origen)
                     
                     resultado_data = {
-                        'solicitud_id': solicitud_id,
-                        'asignatura_id': asignatura_id,
+                        'id_solicitud': id_solicitud,
+                        'id_asignatura': id_asignatura,
                         'nota_obtenida': nota_obtenida,
                         'nota_convertida': nota_convertida,
                         'escala_origen': escala_origen,
@@ -93,8 +93,8 @@ class ResultadoService:
                     }
                     
                     # Insertar en la base de datos
-                    resultado_id = Resultado.create(resultado_data)
-                    resultados.append(resultado_id)
+                    id_resultado = Resultado.create(resultado_data)
+                    resultados.append(id_resultado)
                     
                 except Exception as e:
                     # Registrar error para este registro
@@ -114,14 +114,14 @@ class ResultadoService:
             return None, f"Error al procesar el archivo CSV: {str(e)}"
     
     @staticmethod
-    def get_by_solicitud(solicitud_id):
+    def get_by_solicitud(id_solicitud):
         """Obtiene todos los resultados para una solicitud específica"""
         # Verificar si existe la solicitud
-        solicitud = Solicitud.get_by_id(solicitud_id)
+        solicitud = Solicitud.get_by_id(id_solicitud)
         if not solicitud:
             return None, "Solicitud no encontrada"
         
-        resultados = Resultado.get_by_solicitud(solicitud_id)
+        resultados = Resultado.get_by_solicitud(id_solicitud)
         
         # Enriquecer con información de asignaturas
         resultados_enriquecidos = []
@@ -129,7 +129,7 @@ class ResultadoService:
             resultado_dict = serialize_doc(resultado)
             
             # Agregar información de la asignatura
-            asignatura = Asignatura.get_by_id(str(resultado['asignatura_id']))
+            asignatura = Asignatura.get_by_id(str(resultado['id_asignatura']))
             if asignatura:
                 resultado_dict['asignatura'] = {
                     'codigo_origen': asignatura.get('codigo_asignatura_origen'),
@@ -143,35 +143,35 @@ class ResultadoService:
         return resultados_enriquecidos, "Resultados encontrados exitosamente"
     
     @staticmethod
-    def get_by_asignatura(asignatura_id):
+    def get_by_asignatura(id_asignatura):
         """Obtiene el resultado para una asignatura específica"""
         # Verificar si existe la asignatura
-        asignatura = Asignatura.get_by_id(asignatura_id)
+        asignatura = Asignatura.get_by_id(id_asignatura)
         if not asignatura:
             return None, "Asignatura no encontrada"
         
-        resultado = Resultado.get_by_asignatura(asignatura_id)
+        resultado = Resultado.get_by_asignatura(id_asignatura)
         return serialize_doc(resultado), "Resultado encontrado exitosamente"
     
     @staticmethod
     def create(data):
         """Crea un nuevo resultado de intercambio para una asignatura"""
         # Verificar si existe la solicitud
-        solicitud = Solicitud.get_by_id(data['solicitud_id'])
+        solicitud = Solicitud.get_by_id(data['id_solicitud'])
         if not solicitud:
             return None, "Solicitud no encontrada"
         
         # Verificar si existe la asignatura
-        asignatura = Asignatura.get_by_id(data['asignatura_id'])
+        asignatura = Asignatura.get_by_id(data['id_asignatura'])
         if not asignatura:
             return None, "Asignatura no encontrada"
         
         # Verificar que la asignatura pertenezca a la solicitud
-        if str(asignatura['solicitud_id']) != data['solicitud_id']:
+        if str(asignatura['id_solicitud']) != data['id_solicitud']:
             return None, "La asignatura no pertenece a esta solicitud"
         
         # Verificar si ya existe un resultado para esta asignatura
-        existing = Resultado.get_by_asignatura(data['asignatura_id'])
+        existing = Resultado.get_by_asignatura(data['id_asignatura'])
         if existing:
             return None, "Ya existe un resultado para esta asignatura"
         
@@ -188,30 +188,30 @@ class ResultadoService:
                 data['nota_obtenida'], data['escala_origen']
             )
         
-        resultado_id = Resultado.create(data)
-        return resultado_id, "Resultado creado exitosamente"
+        id_resultado = Resultado.create(data)
+        return id_resultado, "Resultado creado exitosamente"
     
     @staticmethod
-    def update(resultado_id, data):
+    def update(id_resultado, data):
         """Actualiza los datos de un resultado"""
         # Verificar si existe el resultado
-        resultado = Resultado.get_by_id(resultado_id)
+        resultado = Resultado.get_by_id(id_resultado)
         if not resultado:
             return None, "Resultado no encontrado"
         
         # Si se está cambiando la asignatura, verificar que exista y pertenezca a la solicitud
-        if 'asignatura_id' in data:
-            asignatura = Asignatura.get_by_id(data['asignatura_id'])
+        if 'id_asignatura' in data:
+            asignatura = Asignatura.get_by_id(data['id_asignatura'])
             if not asignatura:
                 return None, "Asignatura no encontrada"
             
             # Si también se está cambiando la solicitud, verificar relación
-            if 'solicitud_id' in data:
-                if str(asignatura['solicitud_id']) != data['solicitud_id']:
+            if 'id_solicitud' in data:
+                if str(asignatura['id_solicitud']) != data['id_solicitud']:
                     return None, "La asignatura no pertenece a esta solicitud"
             else:
                 # Verificar con la solicitud actual
-                if str(asignatura['solicitud_id']) != str(resultado['solicitud_id']):
+                if str(asignatura['id_solicitud']) != str(resultado['id_solicitud']):
                     return None, "La asignatura no pertenece a esta solicitud"
         
         # Si se cambia la nota, recalcular la conversión
@@ -223,56 +223,56 @@ class ResultadoService:
                 data['nota_obtenida'], escala_origen
             )
         
-        updated = Resultado.update(resultado_id, data)
+        updated = Resultado.update(id_resultado, data)
         return serialize_doc(updated), "Resultado actualizado exitosamente"
     
     @staticmethod
-    def aprobar_homologacion(resultado_id, aprobado_por=None, observaciones=None):
+    def aprobar_homologacion(id_resultado, aprobado_por=None, observaciones=None):
         """Aprueba la homologación de una nota"""
         # Verificar si existe el resultado
-        resultado = Resultado.get_by_id(resultado_id)
+        resultado = Resultado.get_by_id(id_resultado)
         if not resultado:
             return None, "Resultado no encontrado"
         
-        updated = Resultado.aprobar_homologacion(resultado_id, aprobado_por, observaciones)
+        updated = Resultado.aprobar_homologacion(id_resultado, aprobado_por, observaciones)
         
         # Verificar si todos los resultados de la solicitud están homologados
-        solicitud_id = str(resultado['solicitud_id'])
-        todos_homologados = Resultado.verificar_todos_homologados(solicitud_id)
+        id_solicitud = str(resultado['id_solicitud'])
+        todos_homologados = Resultado.verificar_todos_homologados(id_solicitud)
         
         mensaje_adicional = ""
         if todos_homologados:
             mensaje_adicional = " Todos los resultados de esta solicitud han sido homologados."
             
             # Actualizar el seguimiento y la solicitud
-            seguimiento = seguimiento.get_by_solicitud(solicitud_id)
+            seguimiento = seguimiento.get_by_solicitud(id_solicitud)
             if seguimiento:
                 seguimiento.cambiar_estado(str(seguimiento['_id']), 'finalizado', 
                                           "Intercambio finalizado con éxito")
             
-            Solicitud.update_estado(solicitud_id, 'finalizada', 
+            Solicitud.update_estado(id_solicitud, 'finalizada', 
                                   "Intercambio finalizado con éxito")
         
         return serialize_doc(updated), f"Homologación aprobada exitosamente.{mensaje_adicional}"
     
     @staticmethod
-    def rechazar_homologacion(resultado_id, motivo, rechazado_por=None):
+    def rechazar_homologacion(id_resultado, motivo, rechazado_por=None):
         """Rechaza la homologación de una nota"""
         # Verificar si existe el resultado
-        resultado = Resultado.get_by_id(resultado_id)
+        resultado = Resultado.get_by_id(id_resultado)
         if not resultado:
             return None, "Resultado no encontrado"
         
-        updated = Resultado.rechazar_homologacion(resultado_id, motivo, rechazado_por)
+        updated = Resultado.rechazar_homologacion(id_resultado, motivo, rechazado_por)
         return serialize_doc(updated), "Homologación rechazada exitosamente"
     
     @staticmethod
-    def get_promedio_intercambio(solicitud_id):
+    def get_promedio_intercambio(id_solicitud):
         """Calcula el promedio de las notas homologadas para una solicitud"""
         # Verificar si existe la solicitud
-        solicitud = Solicitud.get_by_id(solicitud_id)
+        solicitud = Solicitud.get_by_id(id_solicitud)
         if not solicitud:
             return None, "Solicitud no encontrada"
         
-        promedio = Resultado.get_promedio_intercambio(solicitud_id)
+        promedio = Resultado.get_promedio_intercambio(id_solicitud)
         return promedio, "Promedio calculado exitosamente"

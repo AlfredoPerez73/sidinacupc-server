@@ -7,6 +7,7 @@ from routes.estudiante_routes import estudiantes_bp
 from routes.convenio_routes import convenios_bp
 from routes.solicitud_routes import solicitudes_bp
 from routes.asignatura_routes import asignaturas_bp
+from routes.docente_routes import docente_bp
 from routes.seguimiento_routes import seguimiento_bp
 from routes.resultado_routes import resultados_bp
 from routes.reportes_routes import reportes_bp
@@ -32,6 +33,7 @@ def create_app():
     # Registrar blueprints
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(estudiantes_bp, url_prefix='/api/estudiantes')
+    app.register_blueprint(docente_bp, url_prefix='/api/docentes')
     app.register_blueprint(convenios_bp, url_prefix='/api/convenios')
     app.register_blueprint(solicitudes_bp, url_prefix='/api/solicitudes')
     app.register_blueprint(asignaturas_bp, url_prefix='/api/asignaturas')

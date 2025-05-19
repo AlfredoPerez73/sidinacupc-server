@@ -7,7 +7,7 @@ class Asignatura:
     def create(data):
         """Crea una nueva equivalencia de asignatura para una solicitud de intercambio"""
         asignatura = {
-            'solicitud_id': ObjectId(data.get('solicitud_id')),
+            'id_solicitud': ObjectId(data.get('id_solicitud')),
             'codigo_asignatura_origen': data.get('codigo_asignatura_origen'),
             'nombre_asignatura_origen': data.get('nombre_asignatura_origen'),
             'creditos_asignatura_origen': data.get('creditos_asignatura_origen'),
@@ -26,39 +26,39 @@ class Asignatura:
         return str(result.inserted_id)
     
     @staticmethod
-    def get_by_id(asignatura_id):
+    def get_by_id(id_asignatura):
         """Obtiene una asignatura por su ID"""
-        return mongo.db.asignaturas.find_one({'_id': ObjectId(asignatura_id)})
+        return mongo.db.asignaturas.find_one({'_id': ObjectId(id_asignatura)})
     
     @staticmethod
-    def get_by_solicitud(solicitud_id):
+    def get_by_solicitud(id_solicitud):
         """Obtiene todas las asignaturas para una solicitud específica"""
-        return list(mongo.db.asignaturas.find({'solicitud_id': ObjectId(solicitud_id)}))
+        return list(mongo.db.asignaturas.find({'id_solicitud': ObjectId(id_solicitud)}))
     
     @staticmethod
-    def update(asignatura_id, data):
+    def update(id_asignatura, data):
         """Actualiza los datos de una asignatura"""
-        # Convertir solicitud_id a ObjectId si está presente
-        if 'solicitud_id' in data:
-            data['solicitud_id'] = ObjectId(data['solicitud_id'])
+        # Convertir id_solicitud a ObjectId si está presente
+        if 'id_solicitud' in data:
+            data['id_solicitud'] = ObjectId(data['id_solicitud'])
         
         data['fecha_actualizacion'] = datetime.utcnow()
         
         mongo.db.asignaturas.update_one(
-            {'_id': ObjectId(asignatura_id)},
+            {'_id': ObjectId(id_asignatura)},
             {'$set': data}
         )
         
-        return Asignatura.get_by_id(asignatura_id)
+        return Asignatura.get_by_id(id_asignatura)
     
     @staticmethod
-    def delete(asignatura_id):
+    def delete(id_asignatura):
         """Elimina una asignatura"""
-        result = mongo.db.asignaturas.delete_one({'_id': ObjectId(asignatura_id)})
+        result = mongo.db.asignaturas.delete_one({'_id': ObjectId(id_asignatura)})
         return result.deleted_count > 0
     
     @staticmethod
-    def aprobar_equivalencia(asignatura_id, aprobado_por):
+    def aprobar_equivalencia(id_asignatura, aprobado_por):
         """Aprueba una equivalencia de asignatura"""
         data = {
             'estado_equivalencia': 'aprobada',
@@ -68,14 +68,14 @@ class Asignatura:
         }
         
         mongo.db.asignaturas.update_one(
-            {'_id': ObjectId(asignatura_id)},
+            {'_id': ObjectId(id_asignatura)},
             {'$set': data}
         )
         
-        return Asignatura.get_by_id(asignatura_id)
+        return Asignatura.get_by_id(id_asignatura)
     
     @staticmethod
-    def rechazar_equivalencia(asignatura_id, observaciones, aprobado_por):
+    def rechazar_equivalencia(id_asignatura, observaciones, aprobado_por):
         """Rechaza una equivalencia de asignatura"""
         data = {
             'estado_equivalencia': 'rechazada',
@@ -86,16 +86,16 @@ class Asignatura:
         }
         
         mongo.db.asignaturas.update_one(
-            {'_id': ObjectId(asignatura_id)},
+            {'_id': ObjectId(id_asignatura)},
             {'$set': data}
         )
         
-        return Asignatura.get_by_id(asignatura_id)
+        return Asignatura.get_by_id(id_asignatura)
     
     @staticmethod
-    def verificar_todas_aprobadas(solicitud_id):
+    def verificar_todas_aprobadas(id_solicitud):
         """Verifica si todas las asignaturas de una solicitud están aprobadas"""
-        asignaturas = Asignatura.get_by_solicitud(solicitud_id)
+        asignaturas = Asignatura.get_by_solicitud(id_solicitud)
         
         if not asignaturas:
             return False
@@ -107,9 +107,9 @@ class Asignatura:
         return True
     
     @staticmethod
-    def obtener_total_creditos(solicitud_id):
+    def obtener_total_creditos(id_solicitud):
         """Obtiene el total de créditos de las asignaturas aprobadas para una solicitud"""
-        asignaturas = Asignatura.get_by_solicitud(solicitud_id)
+        asignaturas = Asignatura.get_by_solicitud(id_solicitud)
         
         total_creditos = 0
         for asignatura in asignaturas:

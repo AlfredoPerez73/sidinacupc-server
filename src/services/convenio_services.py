@@ -66,8 +66,8 @@ class ConvenioService:
                         }
                     
                     # Insertar en la base de datos
-                    convenio_id = Convenio.create(convenio_data)
-                    resultados.append(convenio_id)
+                    id_convenio = Convenio.create(convenio_data)
+                    resultados.append(id_convenio)
                     
                 except Exception as e:
                     # Registrar error para este registro
@@ -87,37 +87,37 @@ class ConvenioService:
             return None, f"Error al procesar el archivo CSV: {str(e)}"
     
     @staticmethod
-    def get_by_id(convenio_id):
+    def get_by_id(id_convenio):
         """Obtiene un convenio por su ID"""
-        convenio = Convenio.get_by_id(convenio_id)
+        convenio = Convenio.get_by_id(id_convenio)
         return serialize_doc(convenio)
     
     @staticmethod
     def create(data):
         """Crea un nuevo convenio"""
-        convenio_id = Convenio.create(data)
-        return convenio_id, "Convenio creado exitosamente"
+        id_convenio = Convenio.create(data)
+        return id_convenio, "Convenio creado exitosamente"
     
     @staticmethod
-    def update(convenio_id, data):
+    def update(id_convenio, data):
         """Actualiza los datos de un convenio"""
         # Verificar si existe el convenio
-        convenio = Convenio.get_by_id(convenio_id)
+        convenio = Convenio.get_by_id(id_convenio)
         if not convenio:
             return None, "Convenio no encontrado"
         
-        updated = Convenio.update(convenio_id, data)
+        updated = Convenio.update(id_convenio, data)
         return serialize_doc(updated), "Convenio actualizado exitosamente"
     
     @staticmethod
-    def delete(convenio_id):
+    def delete(id_convenio):
         """Elimina un convenio (cambia su estado a inactivo)"""
         # Verificar si existe el convenio
-        convenio = Convenio.get_by_id(convenio_id)
+        convenio = Convenio.get_by_id(id_convenio)
         if not convenio:
             return False, "Convenio no encontrado"
         
-        Convenio.delete(convenio_id)
+        Convenio.delete(id_convenio)
         return True, "Convenio eliminado exitosamente"
     
     @staticmethod

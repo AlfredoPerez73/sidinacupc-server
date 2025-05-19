@@ -30,9 +30,9 @@ class Estudiante:
         return str(result.inserted_id)
     
     @staticmethod
-    def get_by_id(estudiante_id):
+    def get_by_id(id_estudiante):
         """Obtiene un estudiante por su ID"""
-        return mongo.db.estudiantes.find_one({'_id': ObjectId(estudiante_id)})
+        return mongo.db.estudiantes.find_one({'_id': ObjectId(id_estudiante)})
     
     @staticmethod
     def get_by_documento(documento):
@@ -40,22 +40,22 @@ class Estudiante:
         return mongo.db.estudiantes.find_one({'documento_identidad': documento})
     
     @staticmethod
-    def update(estudiante_id, data):
+    def update(id_estudiante, data):
         """Actualiza los datos de un estudiante"""
         data['fecha_actualizacion'] = datetime.utcnow()
         
         mongo.db.estudiantes.update_one(
-            {'_id': ObjectId(estudiante_id)},
+            {'_id': ObjectId(id_estudiante)},
             {'$set': data}
         )
         
-        return Estudiante.get_by_id(estudiante_id)
+        return Estudiante.get_by_id(id_estudiante)
     
     @staticmethod
-    def delete(estudiante_id):
+    def delete(id_estudiante):
         """Elimina un estudiante (cambio de estado a inactivo)"""
         mongo.db.estudiantes.update_one(
-            {'_id': ObjectId(estudiante_id)},
+            {'_id': ObjectId(id_estudiante)},
             {'$set': {'estado': 'inactivo', 'fecha_actualizacion': datetime.utcnow()}}
         )
         
@@ -85,9 +85,9 @@ class Estudiante:
         }
     
     @staticmethod
-    def cumple_requisitos_intercambio(estudiante_id):
+    def cumple_requisitos_intercambio(id_estudiante):
         """Verifica si un estudiante cumple con los requisitos para intercambio"""
-        estudiante = Estudiante.get_by_id(estudiante_id)
+        estudiante = Estudiante.get_by_id(id_estudiante)
         
         if not estudiante:
             return False, "Estudiante no encontrado"

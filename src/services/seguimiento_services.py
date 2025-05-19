@@ -6,16 +6,16 @@ from db.db import serialize_doc
 
 class SeguimientoService:
     @staticmethod
-    def get_by_id(seguimiento_id):
+    def get_by_id(id_seguimiento):
         """Obtiene un seguimiento por su ID"""
-        seguimiento = Seguimiento.get_by_id(seguimiento_id)
+        seguimiento = Seguimiento.get_by_id(id_seguimiento)
         return serialize_doc(seguimiento)
     
     @staticmethod
-    def importar_reportes_csv(archivo_csv, seguimiento_id):
+    def importar_reportes_csv(archivo_csv, id_seguimiento):
         try:
             # Verificar si existe el seguimiento
-            seguimiento = Seguimiento.get_by_id(seguimiento_id)
+            seguimiento = Seguimiento.get_by_id(id_seguimiento)
             if not seguimiento:
                 return None, "Seguimiento no encontrado"
             
@@ -40,7 +40,7 @@ class SeguimientoService:
                     }
                     
                     # Insertar en el seguimiento
-                    updated = Seguimiento.agregar_reporte(seguimiento_id, reporte)
+                    updated = Seguimiento.agregar_reporte(id_seguimiento, reporte)
                     resultados.append(index)
                     
                 except Exception as e:
@@ -61,59 +61,59 @@ class SeguimientoService:
             return None, f"Error al procesar el archivo CSV: {str(e)}"
         
     @staticmethod
-    def get_by_solicitud(solicitud_id):
+    def get_by_solicitud(id_solicitud):
         """Obtiene el seguimiento para una solicitud específica"""
         # Verificar si existe la solicitud
-        solicitud = Solicitud.get_by_id(solicitud_id)
+        solicitud = Solicitud.get_by_id(id_solicitud)
         if not solicitud:
             return None, "Solicitud no encontrada"
         
-        seguimiento = Seguimiento.get_by_solicitud(solicitud_id)
+        seguimiento = Seguimiento.get_by_solicitud(id_solicitud)
         return serialize_doc(seguimiento), "Seguimiento encontrado exitosamente"
     
     @staticmethod
     def create(data):
         """Crea un nuevo seguimiento para una solicitud"""
         # Verificar si existe la solicitud
-        solicitud = Solicitud.get_by_id(data['solicitud_id'])
+        solicitud = Solicitud.get_by_id(data['id_solicitud'])
         if not solicitud:
             return None, "Solicitud no encontrada"
         
         # Verificar si ya existe un seguimiento para esta solicitud
-        existing = Seguimiento.get_by_solicitud(data['solicitud_id'])
+        existing = Seguimiento.get_by_solicitud(data['id_solicitud'])
         if existing:
             return None, "Ya existe un seguimiento para esta solicitud"
         
-        seguimiento_id = Seguimiento.create(data)
-        return seguimiento_id, "Seguimiento creado exitosamente"
+        id_seguimiento = Seguimiento.create(data)
+        return id_seguimiento, "Seguimiento creado exitosamente"
     
     @staticmethod
-    def update(seguimiento_id, data):
+    def update(id_seguimiento, data):
         """Actualiza los datos de un seguimiento"""
         # Verificar si existe el seguimiento
-        seguimiento = Seguimiento.get_by_id(seguimiento_id)
+        seguimiento = Seguimiento.get_by_id(id_seguimiento)
         if not seguimiento:
             return None, "Seguimiento no encontrado"
         
         # Si se está cambiando la solicitud, verificar que exista
-        if 'solicitud_id' in data:
-            solicitud = Solicitud.get_by_id(data['solicitud_id'])
+        if 'id_solicitud' in data:
+            solicitud = Solicitud.get_by_id(data['id_solicitud'])
             if not solicitud:
                 return None, "Solicitud no encontrada"
             
             # Verificar que no exista otro seguimiento para la nueva solicitud
-            existing = Seguimiento.get_by_solicitud(data['solicitud_id'])
-            if existing and str(existing['_id']) != seguimiento_id:
+            existing = Seguimiento.get_by_solicitud(data['id_solicitud'])
+            if existing and str(existing['_id']) != id_seguimiento:
                 return None, "Ya existe un seguimiento para esta solicitud"
         
-        updated = Seguimiento.update(seguimiento_id, data)
+        updated = Seguimiento.update(id_seguimiento, data)
         return serialize_doc(updated), "Seguimiento actualizado exitosamente"
     
     @staticmethod
-    def agregar_reporte(seguimiento_id, reporte):
+    def agregar_reporte(id_seguimiento, reporte):
         """Agrega un nuevo reporte de avance al seguimiento"""
         # Verificar si existe el seguimiento
-        seguimiento = Seguimiento.get_by_id(seguimiento_id)
+        seguimiento = Seguimiento.get_by_id(id_seguimiento)
         if not seguimiento:
             return None, "Seguimiento no encontrado"
         
@@ -121,14 +121,14 @@ class SeguimientoService:
         if 'contenido' not in reporte or not reporte['contenido']:
             return None, "El contenido del reporte es requerido"
         
-        updated = Seguimiento.agregar_reporte(seguimiento_id, reporte)
+        updated = Seguimiento.agregar_reporte(id_seguimiento, reporte)
         return serialize_doc(updated), "Reporte agregado exitosamente"
     
     @staticmethod
-    def agregar_documento(seguimiento_id, documento):
+    def agregar_documento(id_seguimiento, documento):
         """Agrega un nuevo documento soporte al seguimiento"""
         # Verificar si existe el seguimiento
-        seguimiento = Seguimiento.get_by_id(seguimiento_id)
+        seguimiento = Seguimiento.get_by_id(id_seguimiento)
         if not seguimiento:
             return None, "Seguimiento no encontrado"
         
@@ -139,14 +139,14 @@ class SeguimientoService:
         if 'archivo' not in documento or not documento['archivo']:
             return None, "El archivo es requerido"
         
-        updated = Seguimiento.agregar_documento(seguimiento_id, documento)
+        updated = Seguimiento.agregar_documento(id_seguimiento, documento)
         return serialize_doc(updated), "Documento agregado exitosamente"
     
     @staticmethod
-    def agregar_evaluacion(seguimiento_id, evaluacion):
+    def agregar_evaluacion(id_seguimiento, evaluacion):
         """Agrega una nueva evaluación al seguimiento"""
         # Verificar si existe el seguimiento
-        seguimiento = Seguimiento.get_by_id(seguimiento_id)
+        seguimiento = Seguimiento.get_by_id(id_seguimiento)
         if not seguimiento:
             return None, "Seguimiento no encontrado"
         
@@ -157,14 +157,14 @@ class SeguimientoService:
         if 'comentarios' not in evaluacion or not evaluacion['comentarios']:
             return None, "Los comentarios son requeridos"
         
-        updated = Seguimiento.agregar_evaluacion(seguimiento_id, evaluacion)
+        updated = Seguimiento.agregar_evaluacion(id_seguimiento, evaluacion)
         return serialize_doc(updated), "Evaluación agregada exitosamente"
     
     @staticmethod
-    def cambiar_estado(seguimiento_id, nuevo_estado, observaciones=None):
+    def cambiar_estado(id_seguimiento, nuevo_estado, observaciones=None):
         """Cambia el estado actual del seguimiento"""
         # Verificar si existe el seguimiento
-        seguimiento = Seguimiento.get_by_id(seguimiento_id)
+        seguimiento = Seguimiento.get_by_id(id_seguimiento)
         if not seguimiento:
             return None, "Seguimiento no encontrado"
         
@@ -173,12 +173,12 @@ class SeguimientoService:
         if nuevo_estado not in estados_validos:
             return None, f"Estado no válido. Estados permitidos: {', '.join(estados_validos)}"
         
-        updated = Seguimiento.cambiar_estado(seguimiento_id, nuevo_estado, observaciones)
+        updated = Seguimiento.cambiar_estado(id_seguimiento, nuevo_estado, observaciones)
         
         # Si el estado cambia a 'finalizado', actualizar también la solicitud
         if nuevo_estado == 'finalizado':
-            solicitud_id = str(seguimiento['solicitud_id'])
-            Solicitud.update_estado(solicitud_id, 'finalizada', observaciones)
+            id_solicitud = str(seguimiento['id_solicitud'])
+            Solicitud.update_estado(id_solicitud, 'finalizada', observaciones)
         
         return serialize_doc(updated), f"Estado del seguimiento actualizado a {nuevo_estado}"
     
@@ -193,10 +193,10 @@ class SeguimientoService:
             seguimiento_dict = serialize_doc(seguimiento)
             
             # Agregar información de la solicitud
-            solicitud = Solicitud.get_by_id(str(seguimiento['solicitud_id']))
+            solicitud = Solicitud.get_by_id(str(seguimiento['id_solicitud']))
             if solicitud:
-                estudiante = estudiante.get_by_id(str(solicitud['estudiante_id']))
-                convenio = convenio.get_by_id(str(solicitud['convenio_id']))
+                estudiante = estudiante.get_by_id(str(solicitud['id_estudiante']))
+                convenio = convenio.get_by_id(str(solicitud['id_convenio']))
                 
                 seguimiento_dict['solicitud'] = {
                     'id': str(solicitud['_id']),
@@ -221,10 +221,10 @@ class SeguimientoService:
             seguimiento_dict = serialize_doc(seguimiento)
             
             # Agregar información de la solicitud
-            solicitud = Solicitud.get_by_id(str(seguimiento['solicitud_id']))
+            solicitud = Solicitud.get_by_id(str(seguimiento['id_solicitud']))
             if solicitud:
-                estudiante = estudiante.get_by_id(str(solicitud['estudiante_id']))
-                convenio = convenio.get_by_id(str(solicitud['convenio_id']))
+                estudiante = estudiante.get_by_id(str(solicitud['id_estudiante']))
+                convenio = convenio.get_by_id(str(solicitud['id_convenio']))
                 
                 seguimiento_dict['solicitud'] = {
                     'id': str(solicitud['_id']),

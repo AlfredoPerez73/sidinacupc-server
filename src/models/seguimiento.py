@@ -7,7 +7,7 @@ class Seguimiento:
     def create(data):
         """Crea un nuevo seguimiento para una solicitud de intercambio"""
         seguimiento = {
-            'solicitud_id': ObjectId(data.get('solicitud_id')),
+            'id_solicitud': ObjectId(data.get('id_solicitud')),
             'fecha_inicio': data.get('fecha_inicio', datetime.utcnow()),
             'fecha_fin': data.get('fecha_fin'),
             'estado_actual': data.get('estado_actual', 'en proceso'),
@@ -30,16 +30,16 @@ class Seguimiento:
         return mongo.db.seguimientos.find_one({'_id': ObjectId(seguimiento_id)})
     
     @staticmethod
-    def get_by_solicitud(solicitud_id):
+    def get_by_solicitud(id_solicitud):
         """Obtiene el seguimiento para una solicitud específica"""
-        return mongo.db.seguimientos.find_one({'solicitud_id': ObjectId(solicitud_id)})
+        return mongo.db.seguimientos.find_one({'id_solicitud': ObjectId(id_solicitud)})
     
     @staticmethod
     def update(seguimiento_id, data):
         """Actualiza los datos de un seguimiento"""
-        # Convertir solicitud_id a ObjectId si está presente
-        if 'solicitud_id' in data:
-            data['solicitud_id'] = ObjectId(data['solicitud_id'])
+        # Convertir id_solicitud a ObjectId si está presente
+        if 'id_solicitud' in data:
+            data['id_solicitud'] = ObjectId(data['id_solicitud'])
         
         data['fecha_actualizacion'] = datetime.utcnow()
         

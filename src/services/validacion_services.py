@@ -7,15 +7,15 @@ from bson import ObjectId
 
 class ValidacionService:
     @staticmethod
-    def validar_requisitos_estudiante(estudiante_id):
+    def validar_requisitos_estudiante(id_estudiante):
         """Valida si un estudiante cumple con los requisitos para intercambio"""
-        return Estudiante.cumple_requisitos_intercambio(estudiante_id)
+        return Estudiante.cumple_requisitos_intercambio(id_estudiante)
     
     @staticmethod
-    def validar_asignaturas_solicitud(solicitud_id):
+    def validar_asignaturas_solicitud(id_solicitud):
         """Valida que las asignaturas de una solicitud cumplan con los requisitos mínimos"""
         # Obtener todas las asignaturas de la solicitud
-        asignaturas = Asignatura.get_by_solicitud(solicitud_id)
+        asignaturas = Asignatura.get_by_solicitud(id_solicitud)
         
         # Verificar si hay asignaturas
         if not asignaturas:
@@ -44,9 +44,9 @@ class ValidacionService:
         return True, f"Las asignaturas cumplen con los requisitos mínimos. Total de créditos: {total_creditos}"
     
     @staticmethod
-    def validar_proceso_aprobacion(solicitud_id, nivel_aprobacion):
+    def validar_proceso_aprobacion(id_solicitud, nivel_aprobacion):
         """Valida si una solicitud puede avanzar al siguiente nivel de aprobación"""
-        solicitud = Solicitud.get_by_id(solicitud_id)
+        solicitud = Solicitud.get_by_id(id_solicitud)
         
         if not solicitud:
             return False, "Solicitud no encontrada"
@@ -71,10 +71,10 @@ class ValidacionService:
             return False, "Nivel de aprobación no válido"
     
     @staticmethod
-    def validar_homologacion_resultados(solicitud_id):
+    def validar_homologacion_resultados(id_solicitud):
         """Valida si los resultados de una solicitud pueden ser homologados"""
         # Verificar si existe la solicitud
-        solicitud = Solicitud.get_by_id(solicitud_id)
+        solicitud = Solicitud.get_by_id(id_solicitud)
         if not solicitud:
             return False, "Solicitud no encontrada"
         
@@ -83,7 +83,7 @@ class ValidacionService:
             return False, "La solicitud debe estar aprobada para homologar resultados"
         
         # Verificar que haya asignaturas registradas
-        asignaturas = Asignatura.get_by_solicitud(solicitud_id)
+        asignaturas = Asignatura.get_by_solicitud(id_solicitud)
         if not asignaturas:
             return False, "No hay asignaturas registradas para esta solicitud"
         
@@ -96,10 +96,10 @@ class ValidacionService:
         return True, "Los resultados pueden ser homologados"
     
     @staticmethod
-    def validar_finalizacion_intercambio(solicitud_id):
+    def validar_finalizacion_intercambio(id_solicitud):
         """Valida si un intercambio puede ser finalizado"""
         # Verificar si existe la solicitud
-        solicitud = Solicitud.get_by_id(solicitud_id)
+        solicitud = Solicitud.get_by_id(id_solicitud)
         if not solicitud:
             return False, "Solicitud no encontrada"
         
@@ -108,12 +108,12 @@ class ValidacionService:
             return False, "La solicitud debe estar aprobada para finalizar el intercambio"
         
         # Verificar que todos los resultados estén homologados
-        todos_homologados = Resultado.verificar_todos_homologados(solicitud_id)
+        todos_homologados = Resultado.verificar_todos_homologados(id_solicitud)
         if not todos_homologados:
             return False, "No todos los resultados han sido homologados"
         
         # Verificar que el seguimiento esté en estado adecuado
-        seguimiento = seguimiento.get_by_solicitud(solicitud_id)
+        seguimiento = seguimiento.get_by_solicitud(id_solicitud)
         if not seguimiento:
             return False, "No hay seguimiento registrado para esta solicitud"
         

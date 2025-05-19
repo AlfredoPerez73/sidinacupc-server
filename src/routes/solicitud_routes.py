@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify, current_app
 from models.solicitud import Solicitud
 from models.estudiante import Estudiante
+from models.docente import Docente  # Asumiendo que existe un modelo de Docente
 from services.solicitud_services import SolicitudService
 from models.convenio import Convenio
 from db.db import serialize_doc
@@ -62,27 +63,40 @@ def get_solicitudes(current_user):
         filters['tipo_intercambio'] = request.args.get('tipo')
     if 'periodo' in request.args:
         filters['periodo_academico'] = request.args.get('periodo')
-    if 'estudiante_id' in request.args:
-        filters['estudiante_id'] = ObjectId(request.args.get('estudiante_id'))
+    if 'id_solicitante' in request.args:
+        filters['id_solicitante'] = ObjectId(request.args.get('id_solicitante'))
+    if 'tipo_solicitante' in request.args:
+        filters['tipo_solicitante'] = request.args.get('tipo_solicitante')
     
     result = Solicitud.get_all(filters, page, per_page)
     
-    # Enriquecer las solicitudes con datos de estudiantes y convenios
+    # Enriquecer las solicitudes con datos de solicitantes y convenios
     solicitudes_enriquecidas = []
     for solicitud in result['solicitudes']:
         solicitud_dict = serialize_doc(solicitud)
         
-        # Agregar información del estudiante
-        estudiante = Estudiante.get_by_id(str(solicitud['estudiante_id']))
-        if estudiante:
-            solicitud_dict['estudiante'] = {
-                'nombre': estudiante.get('nombre_completo'),
-                'programa': estudiante.get('programa_academico'),
-                'facultad': estudiante.get('facultad')
-            }
+        # Agregar información del solicitante (estudiante o docente)
+        if solicitud.get('tipo_solicitante') == 'docente':
+            solicitante = Docente.get_by_id(str(solicitud['id_solicitante']))
+            if solicitante:
+                solicitud_dict['solicitante'] = {
+                    'nombre': solicitante.get('nombre_completo'),
+                    'departamento': solicitante.get('departamento'),
+                    'facultad': solicitante.get('facultad'),
+                    'tipo': 'docente'
+                }
+        else:  # Por defecto es estudiante
+            solicitante = Estudiante.get_by_id(str(solicitud['id_solicitante']))
+            if solicitante:
+                solicitud_dict['solicitante'] = {
+                    'nombre': solicitante.get('nombre_completo'),
+                    'programa': solicitante.get('programa_academico'),
+                    'facultad': solicitante.get('facultad'),
+                    'tipo': 'estudiante'
+                }
         
         # Agregar información del convenio
-        convenio = Convenio.get_by_id(str(solicitud['convenio_id']))
+        convenio = Convenio.get_by_id(str(solicitud['id_convenio']))
         if convenio:
             solicitud_dict['convenio'] = {
                 'nombre_institucion': convenio.get('nombre_institucion'),
@@ -100,24 +114,31 @@ def get_solicitudes(current_user):
         'pages': result['pages']
     })
 
-@solicitudes_bp.route('/<solicitud_id>', methods=['GET'])
+@solicitudes_bp.route('/<id_solicitud>', methods=['GET'])
 @token_required
-def get_solicitud(current_user, solicitud_id):
+def get_solicitud(current_user, id_solicitud):
     """Obtiene una solicitud por su ID"""
-    solicitud = Solicitud.get_by_id(solicitud_id)
+    solicitud = Solicitud.get_by_id(id_solicitud)
     
     if not solicitud:
         return jsonify({'message': 'Solicitud no encontrada'}), 404
     
     solicitud_dict = serialize_doc(solicitud)
     
-    # Agregar información del estudiante
-    estudiante = Estudiante.get_by_id(str(solicitud['estudiante_id']))
-    if estudiante:
-        solicitud_dict['estudiante'] = serialize_doc(estudiante)
+    # Agregar información del solicitante (estudiante o docente)
+    if solicitud.get('tipo_solicitante') == 'docente':
+        solicitante = Docente.get_by_id(str(solicitud['id_solicitante']))
+        if solicitante:
+            solicitud_dict['solicitante'] = serialize_doc(solicitante)
+            solicitud_dict['solicitante']['tipo'] = 'docente'
+    else:  # Por defecto es estudiante
+        solicitante = Estudiante.get_by_id(str(solicitud['id_solicitante']))
+        if solicitante:
+            solicitud_dict['solicitante'] = serialize_doc(solicitante)
+            solicitud_dict['solicitante']['tipo'] = 'estudiante'
     
     # Agregar información del convenio
-    convenio = Convenio.get_by_id(str(solicitud['convenio_id']))
+    convenio = Convenio.get_by_id(str(solicitud['id_convenio']))
     if convenio:
         solicitud_dict['convenio'] = serialize_doc(convenio)
     
@@ -130,116 +151,128 @@ def create_solicitud(current_user):
     data = request.json
     
     # Validar datos requeridos
-    required_fields = ['estudiante_id', 'convenio_id', 'periodo_academico', 
+    required_fields = ['id_solicitante', 'id_convenio', 'periodo_academico', 
                        'modalidad', 'tipo_intercambio', 'duracion']
     
     for field in required_fields:
         if field not in data or not data[field]:
             return jsonify({'message': f'El campo {field} es requerido'}), 400
     
-    # Verificar que el estudiante exista
-    estudiante = Estudiante.get_by_id(data['estudiante_id'])
-    if not estudiante:
-        return jsonify({'message': 'Estudiante no encontrado'}), 404
+    # Verificar tipo de solicitante
+    tipo_solicitante = data.get('tipo_solicitante', 'estudiante')
+    
+    # Verificar que el solicitante exista
+    if tipo_solicitante == 'docente':
+        solicitante = Docente.get_by_id(data['id_solicitante'])
+        if not solicitante:
+            return jsonify({'message': 'Docente no encontrado'}), 404
+        
+        # Verificar requisitos para docentes si es necesario
+        # (implementar lógica específica para docentes)
+    else:
+        # Por defecto verificamos que sea un estudiante
+        solicitante = Estudiante.get_by_id(data['id_solicitante'])
+        if not solicitante:
+            return jsonify({'message': 'Estudiante no encontrado'}), 404
+        
+        # Verificar que el estudiante cumpla con los requisitos
+        cumple, mensaje = Estudiante.cumple_requisitos_intercambio(data['id_solicitante'])
+        if not cumple:
+            return jsonify({
+                'message': f'El estudiante no cumple con los requisitos: {mensaje}'
+            }), 400
     
     # Verificar que el convenio exista
-    convenio = Convenio.get_by_id(data['convenio_id'])
+    convenio = Convenio.get_by_id(data['id_convenio'])
     if not convenio:
         return jsonify({'message': 'Convenio no encontrado'}), 404
     
-    # Verificar que el estudiante cumpla con los requisitos
-    cumple, mensaje = Estudiante.cumple_requisitos_intercambio(data['estudiante_id'])
-    if not cumple:
-        return jsonify({
-            'message': f'El estudiante no cumple con los requisitos: {mensaje}'
-        }), 400
-    
     # Crear la solicitud
-    solicitud_id = Solicitud.create(data)
+    id_solicitud = Solicitud.create(data)
     
     return jsonify({
         'message': 'Solicitud creada exitosamente',
-        'solicitud_id': solicitud_id
+        'id_solicitud': id_solicitud
     }), 201
 
-@solicitudes_bp.route('/<solicitud_id>', methods=['PUT'])
+@solicitudes_bp.route('/<id_solicitud>', methods=['PUT'])
 @token_required
-def update_solicitud(current_user, solicitud_id):
+def update_solicitud(current_user, id_solicitud):
     """Actualiza una solicitud existente"""
     data = request.json
     
-    solicitud = Solicitud.get_by_id(solicitud_id)
+    solicitud = Solicitud.get_by_id(id_solicitud)
     if not solicitud:
         return jsonify({'message': 'Solicitud no encontrada'}), 404
     
-    updated = Solicitud.update(solicitud_id, data)
+    updated = Solicitud.update(id_solicitud, data)
     
     return jsonify({
         'message': 'Solicitud actualizada exitosamente',
         'solicitud': serialize_doc(updated)
     })
 
-@solicitudes_bp.route('/<solicitud_id>/estado', methods=['PUT'])
+@solicitudes_bp.route('/<id_solicitud>/estado', methods=['PUT'])
 @token_required
-def update_estado_solicitud(current_user, solicitud_id):
+def update_estado_solicitud(current_user, id_solicitud):
     """Actualiza el estado de una solicitud"""
     data = request.json
     
     if 'estado' not in data:
         return jsonify({'message': 'El campo estado es requerido'}), 400
     
-    solicitud = Solicitud.get_by_id(solicitud_id)
+    solicitud = Solicitud.get_by_id(id_solicitud)
     if not solicitud:
         return jsonify({'message': 'Solicitud no encontrada'}), 404
     
     comentarios = data.get('comentarios')
     
-    updated = Solicitud.update_estado(solicitud_id, data['estado'], comentarios)
+    updated = Solicitud.update_estado(id_solicitud, data['estado'], comentarios)
     
     return jsonify({
         'message': f'Estado de solicitud actualizado a {data["estado"]}',
         'solicitud': serialize_doc(updated)
     })
 
-@solicitudes_bp.route('/<solicitud_id>/aprobacion/jefe-programa', methods=['PUT'])
+@solicitudes_bp.route('/<id_solicitud>/aprobacion/jefe-programa', methods=['PUT'])
 @token_required
-def aprobar_jefe_programa(current_user, solicitud_id):
+def aprobar_jefe_programa(current_user, id_solicitud):
     """Aprueba una solicitud por parte del jefe de programa"""
-    solicitud = Solicitud.get_by_id(solicitud_id)
+    solicitud = Solicitud.get_by_id(id_solicitud)
     if not solicitud:
         return jsonify({'message': 'Solicitud no encontrada'}), 404
     
-    updated = Solicitud.aprobar_jefe_programa(solicitud_id)
+    updated = Solicitud.aprobar_jefe_programa(id_solicitud)
     
     return jsonify({
         'message': 'Solicitud aprobada por el jefe de programa',
         'solicitud': serialize_doc(updated)
     })
 
-@solicitudes_bp.route('/<solicitud_id>/aprobacion/consejo-facultad', methods=['PUT'])
+@solicitudes_bp.route('/<id_solicitud>/aprobacion/consejo-facultad', methods=['PUT'])
 @token_required
-def aprobar_consejo_facultad(current_user, solicitud_id):
+def aprobar_consejo_facultad(current_user, id_solicitud):
     """Aprueba una solicitud por parte del consejo de facultad"""
-    solicitud = Solicitud.get_by_id(solicitud_id)
+    solicitud = Solicitud.get_by_id(id_solicitud)
     if not solicitud:
         return jsonify({'message': 'Solicitud no encontrada'}), 404
     
-    updated = Solicitud.aprobar_consejo_facultad(solicitud_id)
+    updated = Solicitud.aprobar_consejo_facultad(id_solicitud)
     
     return jsonify({
         'message': 'Solicitud aprobada por el consejo de facultad',
         'solicitud': serialize_doc(updated)
     })
 
-@solicitudes_bp.route('/<solicitud_id>/aprobacion/orpi', methods=['PUT'])
+@solicitudes_bp.route('/<id_solicitud>/aprobacion/orpi', methods=['PUT'])
 @token_required
-def aprobar_ORPI(current_user, solicitud_id):
+def aprobar_ORPI(current_user, id_solicitud):
     """Aprueba una solicitud por parte de la oficina de ORPI"""
-    solicitud = Solicitud.get_by_id(solicitud_id)
+    solicitud = Solicitud.get_by_id(id_solicitud)
     if not solicitud:
         return jsonify({'message': 'Solicitud no encontrada'}), 404
     
-    updated, mensaje = Solicitud.aprobar_ORPI(solicitud_id)
+    updated, mensaje = Solicitud.aprobar_ORPI(id_solicitud)
     
     if not updated:
         return jsonify({'message': mensaje}), 400
@@ -249,11 +282,11 @@ def aprobar_ORPI(current_user, solicitud_id):
         'solicitud': serialize_doc(updated)
     })
 
-@solicitudes_bp.route('/<solicitud_id>/documentos', methods=['POST'])
+@solicitudes_bp.route('/<id_solicitud>/documentos', methods=['POST'])
 @token_required
-def upload_documento(current_user, solicitud_id):
+def upload_documento(current_user, id_solicitud):
     """Sube un documento para una solicitud"""
-    solicitud = Solicitud.get_by_id(solicitud_id)
+    solicitud = Solicitud.get_by_id(id_solicitud)
     if not solicitud:
         return jsonify({'message': 'Solicitud no encontrada'}), 404
     
@@ -280,7 +313,7 @@ def upload_documento(current_user, solicitud_id):
             'descripcion': request.form.get('descripcion', '')
         }
         
-        updated = Solicitud.agregar_documento(solicitud_id, documento)
+        updated = Solicitud.agregar_documento(id_solicitud, documento)
         
         return jsonify({
             'message': 'Documento subido exitosamente',

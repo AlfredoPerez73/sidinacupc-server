@@ -56,11 +56,11 @@ def importar_convenios(current_user):
         'errores': result['errores']
     })
 
-@convenios_bp.route('/<convenio_id>', methods=['GET'])
+@convenios_bp.route('/<id_convenio>', methods=['GET'])
 @token_required
-def get_convenio(current_user, convenio_id):
+def get_convenio(current_user, id_convenio):
     """Obtiene un convenio por su ID"""
-    convenio = ConvenioService.get_by_id(convenio_id)
+    convenio = ConvenioService.get_by_id(id_convenio)
     
     if not convenio:
         return jsonify({'message': 'Convenio no encontrado'}), 404
@@ -81,20 +81,20 @@ def create_convenio(current_user):
         if field not in data or not data[field]:
             return jsonify({'message': f'El campo {field} es requerido'}), 400
     
-    convenio_id, mensaje = ConvenioService.create(data)
+    id_convenio, mensaje = ConvenioService.create(data)
     
     return jsonify({
         'message': mensaje,
-        'convenio_id': convenio_id
+        'id_convenio': id_convenio
     }), 201
 
-@convenios_bp.route('/<convenio_id>', methods=['PUT'])
+@convenios_bp.route('/<id_convenio>', methods=['PUT'])
 @token_required
-def update_convenio(current_user, convenio_id):
+def update_convenio(current_user, id_convenio):
     """Actualiza un convenio existente"""
     data = request.json
     
-    updated, mensaje = ConvenioService.update(convenio_id, data)
+    updated, mensaje = ConvenioService.update(id_convenio, data)
     
     if not updated:
         return jsonify({'message': mensaje}), 404
@@ -104,11 +104,11 @@ def update_convenio(current_user, convenio_id):
         'convenio': updated
     })
 
-@convenios_bp.route('/<convenio_id>', methods=['DELETE'])
+@convenios_bp.route('/<id_convenio>', methods=['DELETE'])
 @token_required
-def delete_convenio(current_user, convenio_id):
+def delete_convenio(current_user, id_convenio):
     """Elimina un convenio (cambio de estado a inactivo)"""
-    success, mensaje = ConvenioService.delete(convenio_id)
+    success, mensaje = ConvenioService.delete(id_convenio)
     
     if not success:
         return jsonify({'message': mensaje}), 404

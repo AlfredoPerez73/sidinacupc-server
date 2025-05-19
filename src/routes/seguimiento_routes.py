@@ -28,18 +28,18 @@ def importar_reportes(current_user):
     if 'file' not in request.files:
         return jsonify({'message': 'No se encontró el archivo'}), 400
     
-    # Verificar seguimiento_id en formulario
-    if 'seguimiento_id' not in request.form:
+    # Verificar id_seguimiento en formulario
+    if 'id_seguimiento' not in request.form:
         return jsonify({'message': 'Se requiere el ID del seguimiento'}), 400
     
-    seguimiento_id = request.form['seguimiento_id']
+    id_seguimiento = request.form['id_seguimiento']
     file = request.files['file']
     
     if file.filename == '' or not file.filename.endswith('.csv'):
         return jsonify({'message': 'Archivo no válido. Debe ser un CSV'}), 400
     
     # Procesar archivo
-    result, message = SeguimientoService.importar_reportes_csv(file, seguimiento_id)
+    result, message = SeguimientoService.importar_reportes_csv(file, id_seguimiento)
     
     if not result:
         return jsonify({'message': message}), 400
@@ -51,22 +51,22 @@ def importar_reportes(current_user):
         'errores': result['errores']
     })
 
-@seguimiento_bp.route('/<seguimiento_id>', methods=['GET'])
+@seguimiento_bp.route('/<id_seguimiento>', methods=['GET'])
 @token_required
-def get_seguimiento(current_user, seguimiento_id):
+def get_seguimiento(current_user, id_seguimiento):
     """Obtiene un seguimiento por su ID"""
-    seguimiento = SeguimientoService.get_by_id(seguimiento_id)
+    seguimiento = SeguimientoService.get_by_id(id_seguimiento)
     
     if not seguimiento:
         return jsonify({'message': 'Seguimiento no encontrado'}), 404
     
     return jsonify(seguimiento)
 
-@seguimiento_bp.route('/solicitud/<solicitud_id>', methods=['GET'])
+@seguimiento_bp.route('/solicitud/<id_solicitud>', methods=['GET'])
 @token_required
-def get_seguimiento_solicitud(current_user, solicitud_id):
+def get_seguimiento_solicitud(current_user, id_solicitud):
     """Obtiene el seguimiento para una solicitud específica"""
-    seguimiento, mensaje = SeguimientoService.get_by_solicitud(solicitud_id)
+    seguimiento, mensaje = SeguimientoService.get_by_solicitud(id_solicitud)
     
     if not seguimiento:
         return jsonify({'message': mensaje}), 404
@@ -83,26 +83,26 @@ def create_seguimiento(current_user):
     data = request.json
     
     # Validar datos requeridos
-    if 'solicitud_id' not in data:
-        return jsonify({'message': 'El campo solicitud_id es requerido'}), 400
+    if 'id_solicitud' not in data:
+        return jsonify({'message': 'El campo id_solicitud es requerido'}), 400
     
-    seguimiento_id, mensaje = SeguimientoService.create(data)
+    id_seguimiento, mensaje = SeguimientoService.create(data)
     
-    if not seguimiento_id:
+    if not id_seguimiento:
         return jsonify({'message': mensaje}), 400
     
     return jsonify({
         'message': mensaje,
-        'seguimiento_id': seguimiento_id
+        'id_seguimiento': id_seguimiento
     }), 201
 
-@seguimiento_bp.route('/<seguimiento_id>', methods=['PUT'])
+@seguimiento_bp.route('/<id_seguimiento>', methods=['PUT'])
 @token_required
-def update_seguimiento(current_user, seguimiento_id):
+def update_seguimiento(current_user, id_seguimiento):
     """Actualiza los datos de un seguimiento"""
     data = request.json
     
-    updated, mensaje = SeguimientoService.update(seguimiento_id, data)
+    updated, mensaje = SeguimientoService.update(id_seguimiento, data)
     
     if not updated:
         return jsonify({'message': mensaje}), 404
@@ -112,9 +112,9 @@ def update_seguimiento(current_user, seguimiento_id):
         'seguimiento': updated
     })
 
-@seguimiento_bp.route('/<seguimiento_id>/reporte', methods=['POST'])
+@seguimiento_bp.route('/<id_seguimiento>/reporte', methods=['POST'])
 @token_required
-def agregar_reporte(current_user, seguimiento_id):
+def agregar_reporte(current_user, id_seguimiento):
     """Agrega un nuevo reporte de avance al seguimiento"""
     data = request.json
     
@@ -125,7 +125,7 @@ def agregar_reporte(current_user, seguimiento_id):
     # Agregar información del usuario que reporta
     data['usuario'] = current_user['nombre']
     
-    updated, mensaje = SeguimientoService.agregar_reporte(seguimiento_id, data)
+    updated, mensaje = SeguimientoService.agregar_reporte(id_seguimiento, data)
     
     if not updated:
         return jsonify({'message': mensaje}), 404
@@ -135,9 +135,9 @@ def agregar_reporte(current_user, seguimiento_id):
         'seguimiento': updated
     })
 
-@seguimiento_bp.route('/<seguimiento_id>/documento', methods=['POST'])
+@seguimiento_bp.route('/<id_seguimiento>/documento', methods=['POST'])
 @token_required
-def agregar_documento(current_user, seguimiento_id):
+def agregar_documento(current_user, id_seguimiento):
     """Agrega un nuevo documento soporte al seguimiento"""
     if 'file' not in request.files:
         return jsonify({'message': 'No se encontró el archivo'}), 400
@@ -163,7 +163,7 @@ def agregar_documento(current_user, seguimiento_id):
             'usuario': current_user['nombre']
         }
         
-        updated, mensaje = SeguimientoService.agregar_documento(seguimiento_id, documento)
+        updated, mensaje = SeguimientoService.agregar_documento(id_seguimiento, documento)
         
         if not updated:
             # Eliminar el archivo si hubo un error
@@ -178,9 +178,9 @@ def agregar_documento(current_user, seguimiento_id):
     
     return jsonify({'message': 'Tipo de archivo no permitido'}), 400
 
-@seguimiento_bp.route('/<seguimiento_id>/evaluacion', methods=['POST'])
+@seguimiento_bp.route('/<id_seguimiento>/evaluacion', methods=['POST'])
 @token_required
-def agregar_evaluacion(current_user, seguimiento_id):
+def agregar_evaluacion(current_user, id_seguimiento):
     """Agrega una nueva evaluación al seguimiento"""
     data = request.json
     
@@ -194,7 +194,7 @@ def agregar_evaluacion(current_user, seguimiento_id):
     # Agregar información del usuario que evalúa
     data['usuario'] = current_user['nombre']
     
-    updated, mensaje = SeguimientoService.agregar_evaluacion(seguimiento_id, data)
+    updated, mensaje = SeguimientoService.agregar_evaluacion(id_seguimiento, data)
     
     if not updated:
         return jsonify({'message': mensaje}), 404
@@ -204,16 +204,16 @@ def agregar_evaluacion(current_user, seguimiento_id):
         'seguimiento': updated
     })
 
-@seguimiento_bp.route('/<seguimiento_id>/estado', methods=['PUT'])
+@seguimiento_bp.route('/<id_seguimiento>/estado', methods=['PUT'])
 @token_required
-def cambiar_estado(current_user, seguimiento_id):
+def cambiar_estado(current_user, id_seguimiento):
     """Cambia el estado actual del seguimiento"""
     data = request.json
     
     if 'estado' not in data:
         return jsonify({'message': 'El campo estado es requerido'}), 400
     
-    updated, mensaje = SeguimientoService.cambiar_estado(seguimiento_id, data['estado'], data.get('observaciones'))
+    updated, mensaje = SeguimientoService.cambiar_estado(id_seguimiento, data['estado'], data.get('observaciones'))
     
     if not updated:
         return jsonify({'message': mensaje}), 404

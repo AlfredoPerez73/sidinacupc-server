@@ -7,8 +7,8 @@ class Resultado:
     def create(data):
         """Crea un nuevo resultado de intercambio para una asignatura"""
         resultado = {
-            'solicitud_id': ObjectId(data.get('solicitud_id')),
-            'asignatura_id': ObjectId(data.get('asignatura_id')),
+            'id_solicitud': ObjectId(data.get('id_solicitud')),
+            'id_asignatura': ObjectId(data.get('id_asignatura')),
             'nota_obtenida': data.get('nota_obtenida'),
             'nota_convertida': data.get('nota_convertida'),  # Nota convertida al sistema de la UPC
             'escala_origen': data.get('escala_origen', ''),  # Ej: "0-100", "0-10", "A-F"
@@ -30,23 +30,23 @@ class Resultado:
         return mongo.db.resultados.find_one({'_id': ObjectId(resultado_id)})
     
     @staticmethod
-    def get_by_solicitud(solicitud_id):
+    def get_by_solicitud(id_solicitud):
         """Obtiene todos los resultados para una solicitud específica"""
-        return list(mongo.db.resultados.find({'solicitud_id': ObjectId(solicitud_id)}))
+        return list(mongo.db.resultados.find({'id_solicitud': ObjectId(id_solicitud)}))
     
     @staticmethod
-    def get_by_asignatura(asignatura_id):
+    def get_by_asignatura(id_asignatura):
         """Obtiene el resultado para una asignatura específica"""
-        return mongo.db.resultados.find_one({'asignatura_id': ObjectId(asignatura_id)})
+        return mongo.db.resultados.find_one({'id_asignatura': ObjectId(id_asignatura)})
     
     @staticmethod
     def update(resultado_id, data):
         """Actualiza los datos de un resultado"""
         # Convertir IDs a ObjectId si están presentes
-        if 'solicitud_id' in data:
-            data['solicitud_id'] = ObjectId(data['solicitud_id'])
-        if 'asignatura_id' in data:
-            data['asignatura_id'] = ObjectId(data['asignatura_id'])
+        if 'id_solicitud' in data:
+            data['id_solicitud'] = ObjectId(data['id_solicitud'])
+        if 'id_asignatura' in data:
+            data['id_asignatura'] = ObjectId(data['id_asignatura'])
         
         data['fecha_actualizacion'] = datetime.utcnow()
         
@@ -98,9 +98,9 @@ class Resultado:
         return Resultado.get_by_id(resultado_id)
     
     @staticmethod
-    def verificar_todos_homologados(solicitud_id):
+    def verificar_todos_homologados(id_solicitud):
         """Verifica si todos los resultados de una solicitud están homologados"""
-        resultados = Resultado.get_by_solicitud(solicitud_id)
+        resultados = Resultado.get_by_solicitud(id_solicitud)
         
         if not resultados:
             return False
@@ -147,9 +147,9 @@ class Resultado:
         return nota_origen
     
     @staticmethod
-    def get_promedio_intercambio(solicitud_id):
+    def get_promedio_intercambio(id_solicitud):
         """Calcula el promedio de las notas homologadas para una solicitud"""
-        resultados = Resultado.get_by_solicitud(solicitud_id)
+        resultados = Resultado.get_by_solicitud(id_solicitud)
         
         if not resultados:
             return 0.0

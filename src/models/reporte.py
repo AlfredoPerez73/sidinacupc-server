@@ -88,7 +88,7 @@ class Reporte:
             {
                 '$lookup': {
                     'from': 'estudiantes',
-                    'localField': 'estudiante_id',
+                    'localField': 'id_estudiante',
                     'foreignField': '_id',
                     'as': 'estudiante'
                 }
@@ -112,7 +112,7 @@ class Reporte:
             {
                 '$lookup': {
                     'from': 'convenios',
-                    'localField': 'convenio_id',
+                    'localField': 'id_convenio',
                     'foreignField': '_id',
                     'as': 'convenio'
                 }

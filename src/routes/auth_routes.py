@@ -44,7 +44,7 @@ def register():
     
     return jsonify({
         'message': 'Usuario registrado exitosamente',
-        'user_id': str(result.inserted_id),
+        'id_user': str(result.inserted_id),
         'token': token
     }), 201
 
@@ -70,7 +70,7 @@ def login():
         
         response = jsonify({
             'message': 'Inicio de sesión exitoso',
-            'user_id': str(user['_id']),
+            'id_user': str(user['_id']),
             'nombre': user['nombre'],
             'rol': user['rol'],
             'token': token
@@ -103,14 +103,14 @@ def get_user():
             algorithms=['HS256']
         )
         
-        user_id = payload['sub']
-        user = mongo.db.usuarios.find_one({'_id': ObjectId(user_id)})
+        id_user = payload['sub']
+        user = mongo.db.usuarios.find_one({'_id': ObjectId(id_user)})
         
         if not user:
             return jsonify({'message': 'Usuario no encontrado'}), 404
         
         return jsonify({
-            'user_id': str(user['_id']),
+            'id_user': str(user['_id']),
             'email': user['email'],
             'nombre': user['nombre'],
             'rol': user['rol']
@@ -146,10 +146,10 @@ def verify_token():
         )
         
         # Obtener el ID del usuario del payload
-        user_id = payload['sub']
+        id_user = payload['sub']
         
         # Buscar el usuario en la base de datos
-        user = mongo.db.usuarios.find_one({'_id': ObjectId(user_id)})
+        user = mongo.db.usuarios.find_one({'_id': ObjectId(id_user)})
         
         # Si el usuario no existe
         if not user:
@@ -159,7 +159,7 @@ def verify_token():
         
         # Si todo está bien, devolver los datos del usuario
         return jsonify({
-            'user_id': str(user['_id']),
+            'id_user': str(user['_id']),
             'email': user['email'],
             'nombre': user['nombre'],
             'rol': user['rol'],

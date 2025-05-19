@@ -7,14 +7,15 @@ class Solicitud:
     def create(data):
         """Crea una nueva solicitud de intercambio en la base de datos"""
         solicitud = {
-            'estudiante_id': ObjectId(data.get('estudiante_id')),
-            'convenio_id': ObjectId(data.get('convenio_id')),
+            'id_solicitante': ObjectId(data.get('id_solicitante')),
+            'id_convenio': ObjectId(data.get('id_convenio')),
             'fecha_solicitud': datetime.utcnow(),
             'estado_solicitud': 'pendiente',
             'periodo_academico': data.get('periodo_academico'),
             'modalidad': data.get('modalidad'),
             'tipo_intercambio': data.get('tipo_intercambio'),
             'duracion': data.get('duracion'),
+            'tipo_solicitante': data.get('tipo_solicitante', 'estudiante'),  # Nuevo campo para identificar si es estudiante o docente
             'documentos_adjuntos': data.get('documentos_adjuntos', []),
             'fecha_decision': None,
             'comentarios_decision': None,
@@ -34,18 +35,18 @@ class Solicitud:
         return mongo.db.solicitudes.find_one({'_id': ObjectId(solicitud_id)})
     
     @staticmethod
-    def get_by_estudiante(estudiante_id):
-        """Obtiene todas las solicitudes de un estudiante"""
-        return list(mongo.db.solicitudes.find({'estudiante_id': ObjectId(estudiante_id)}))
+    def get_by_solicitante(id_solicitante):
+        """Obtiene todas las solicitudes de un solicitante (estudiante o docente)"""
+        return list(mongo.db.solicitudes.find({'id_solicitante': ObjectId(id_solicitante)}))
     
     @staticmethod
     def update(solicitud_id, data):
         """Actualiza los datos de una solicitud"""
         # Convertir IDs a ObjectId si están presentes
-        if 'estudiante_id' in data:
-            data['estudiante_id'] = ObjectId(data['estudiante_id'])
-        if 'convenio_id' in data:
-            data['convenio_id'] = ObjectId(data['convenio_id'])
+        if 'id_solicitante' in data:
+            data['id_solicitante'] = ObjectId(data['id_solicitante'])
+        if 'id_convenio' in data:
+            data['id_convenio'] = ObjectId(data['id_convenio'])
         
         data['fecha_actualizacion'] = datetime.utcnow()
         

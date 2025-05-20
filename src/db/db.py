@@ -3,9 +3,11 @@ from bson.objectid import ObjectId
 import json
 from datetime import datetime
 
+# Crear una instancia global de PyMongo
 mongo = PyMongo()
 
 def initialize_db(app):
+    # Inicializar la instancia con la aplicación
     mongo.init_app(app)
     return mongo
 

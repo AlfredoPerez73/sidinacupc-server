@@ -152,7 +152,7 @@ def obtener_docente(current_user, id_docente):
 
 @docente_bp.route('/<id_docente>', methods=['PUT'])
 @token_required
-def actualizar_docente(id_docente):
+def actualizar_docente(current_user, id_docente):
     """Endpoint para actualizar un docente"""
     try:
         data = request.get_json()

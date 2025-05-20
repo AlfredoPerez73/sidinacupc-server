@@ -11,6 +11,7 @@ from routes.docente_routes import docente_bp
 from routes.seguimiento_routes import seguimiento_bp
 from routes.resultado_routes import resultados_bp
 from routes.reportes_routes import reportes_bp
+from routes.validacion_routes import validacion_bp
 import os
 
 def create_app():
@@ -40,6 +41,7 @@ def create_app():
     app.register_blueprint(seguimiento_bp, url_prefix='/api/seguimiento')
     app.register_blueprint(resultados_bp, url_prefix='/api/resultados')
     app.register_blueprint(reportes_bp, url_prefix='/api/reportes')
+    app.register_blueprint(validacion_bp, url_prefix='/api/validacion')
     
     @app.route('/')
     def index():

@@ -83,5 +83,4 @@ class Convenio:
         now = datetime.utcnow()
         return list(mongo.db.convenios.find({
             'estado': 'activo',
-            'fecha_fin': {'$gt': now}
         }).sort('nombre_institucion', 1))

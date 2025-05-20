@@ -90,15 +90,14 @@ def login():
 @auth_bp.route('/user', methods=['GET'])
 def get_user():
     """Obtiene información del usuario actual"""
-    auth_header = request.headers.get('Authorization')
+    token = request.cookies.get('auth_token')  # <-- Cambiado aquí
     
-    if not auth_header:
+    if not token:
         return jsonify({'message': 'Token no proporcionado'}), 401
     
     try:
-        token = auth_header.split(" ")[1]
         payload = jwt.decode(
-            token, 
+            token,
             current_app.config.get('JWT_SECRET_KEY'),
             algorithms=['HS256']
         )

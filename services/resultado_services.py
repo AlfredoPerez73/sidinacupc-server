@@ -234,37 +234,57 @@ class ResultadoService:
         if not resultado:
             return None, "Resultado no encontrado"
         
-        # Llamar al método de la clase Resultado para actualizar la homologación
-        # Asumiendo que este método es el que mostraste anteriormente
-        updated = Resultado.aprobar_homologacion(id_resultado, aprobado_por, observaciones)
-        
-        # Verificar si todos los resultados de la solicitud están homologados
-        id_solicitud = str(resultado['id_solicitud'])
-        todos_homologados = Resultado.verificar_todos_homologados(id_solicitud)
-        
-        mensaje_adicional = ""
-        if todos_homologados:
-            mensaje_adicional = " Todos los resultados de esta solicitud han sido homologados."
-            
-            # Actualizar el seguimiento y la solicitud
-            # CORREGIDO: Uso de SeguimientoService o la clase correcta en lugar de 'seguimiento'
-            from services.seguimiento_services import SeguimientoService  # Importar la clase correcta
-            seguimiento_obj = SeguimientoService.get_by_solicitud(id_solicitud)
-            if seguimiento_obj:
-                SeguimientoService.cambiar_estado(str(seguimiento_obj['_id']), 'finalizado', 
-                                            "Intercambio finalizado con éxito")
-            
-            Solicitud.update_estado(id_solicitud, 'finalizada', 
-                                "Intercambio finalizado con éxito")
-        
         try:
-            # Asegurarnos de que el documento se pueda serializar
-            serialized = serialize_doc(updated)
-            return serialized, f"Homologación aprobada exitosamente.{mensaje_adicional}"
+            # Verificar el tipo de dato del resultado y acceder correctamente
+            if isinstance(resultado, dict):
+                id_solicitud = str(resultado.get('id_solicitud'))
+            elif isinstance(resultado, tuple):
+                # Aquí necesitas saber el índice correcto donde se encuentra id_solicitud
+                # Por ejemplo, si es el primer elemento:
+                id_solicitud = str(resultado[0])  # Ajusta el índice según tu estructura
+            else:
+                # Si es un objeto con atributos
+                id_solicitud = str(resultado.id_solicitud)
+            
+            # Llamar al método de la clase Resultado para actualizar la homologación
+            updated = Resultado.aprobar_homologacion(id_resultado, aprobado_por, observaciones)
+            
+            # Verificar si todos los resultados de la solicitud están homologados
+            todos_homologados = Resultado.verificar_todos_homologados(id_solicitud)
+            
+            mensaje_adicional = ""
+            if todos_homologados:
+                mensaje_adicional = " Todos los resultados de esta solicitud han sido homologados."
+                
+                # Actualizar el seguimiento y la solicitud
+                from services.seguimiento_services import SeguimientoService
+                seguimiento_obj = SeguimientoService.get_by_solicitud(id_solicitud)
+                
+                if seguimiento_obj:
+                    # Acceder al id del seguimiento correctamente según su tipo
+                    if isinstance(seguimiento_obj, dict):
+                        id_seguimiento = str(seguimiento_obj.get('_id'))
+                    elif isinstance(seguimiento_obj, tuple):
+                        # Ajusta el índice según la estructura de tus datos
+                        id_seguimiento = str(seguimiento_obj[0])
+                    else:
+                        # Si es un objeto con atributos
+                        id_seguimiento = str(seguimiento_obj._id)
+                    
+                    SeguimientoService.cambiar_estado(id_seguimiento, 'finalizado', 
+                                            "Intercambio finalizado con éxito")
+                
+                Solicitud.update_estado(id_solicitud, 'finalizada', 
+                                    "Intercambio finalizado con éxito")
+            
+            # Asegurarnos de que el documento se pueda serializar correctamente
+            return serialize_doc(updated), f"Homologación aprobada exitosamente.{mensaje_adicional}"
+            
         except Exception as e:
-            # Manejar errores de serialización
-            print(f"Error al serializar el documento: {str(e)}")
-            return None, f"Error al procesar la respuesta: {str(e)}"
+            print(f"Error en aprobar_homologacion: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return None, f"Error en el servidor: {str(e)}"
     
     @staticmethod
     def rechazar_homologacion(id_resultado, motivo, rechazado_por=None):

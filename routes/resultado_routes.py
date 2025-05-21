@@ -187,19 +187,24 @@ def agregar_documento_soporte(current_user, id_resultado):
 @token_required
 def aprobar_homologacion(current_user, id_resultado):
     """Aprueba la homologación de una nota"""
-    data = request.json
-    
-    observaciones = data.get('observaciones')
-    
-    updated, mensaje = ResultadoService.aprobar_homologacion(id_resultado, current_user['nombre'], observaciones)
-    
-    if not updated:
-        return jsonify({'message': mensaje}), 404
-    
-    return jsonify({
-        'message': mensaje,
-        'resultado': updated
-    })
+    try:
+        data = request.json or {}
+        
+        observaciones = data.get('observaciones')
+        
+        updated, mensaje = ResultadoService.aprobar_homologacion(id_resultado, current_user['nombre'], observaciones)
+        
+        if not updated:
+            return jsonify({'message': mensaje}), 404
+        
+        return jsonify({
+            'message': mensaje,
+            'resultado': updated
+        })
+    except Exception as e:
+        # Registrar el error para diagnóstico
+        print(f"Error al aprobar homologación: {str(e)}")
+        return jsonify({'message': f'Error en el servidor: {str(e)}'}), 500
 
 @resultados_bp.route('/<id_resultado>/rechazar', methods=['PUT'])
 @token_required

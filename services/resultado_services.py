@@ -234,6 +234,8 @@ class ResultadoService:
         if not resultado:
             return None, "Resultado no encontrado"
         
+        # Llamar al método de la clase Resultado para actualizar la homologación
+        # Asumiendo que este método es el que mostraste anteriormente
         updated = Resultado.aprobar_homologacion(id_resultado, aprobado_por, observaciones)
         
         # Verificar si todos los resultados de la solicitud están homologados
@@ -245,15 +247,24 @@ class ResultadoService:
             mensaje_adicional = " Todos los resultados de esta solicitud han sido homologados."
             
             # Actualizar el seguimiento y la solicitud
-            seguimiento = seguimiento.get_by_solicitud(id_solicitud)
-            if seguimiento:
-                seguimiento.cambiar_estado(str(seguimiento['_id']), 'finalizado', 
-                                          "Intercambio finalizado con éxito")
+            # CORREGIDO: Uso de SeguimientoService o la clase correcta en lugar de 'seguimiento'
+            from services.seguimiento_services import SeguimientoService  # Importar la clase correcta
+            seguimiento_obj = SeguimientoService.get_by_solicitud(id_solicitud)
+            if seguimiento_obj:
+                SeguimientoService.cambiar_estado(str(seguimiento_obj['_id']), 'finalizado', 
+                                            "Intercambio finalizado con éxito")
             
             Solicitud.update_estado(id_solicitud, 'finalizada', 
-                                  "Intercambio finalizado con éxito")
+                                "Intercambio finalizado con éxito")
         
-        return serialize_doc(updated), f"Homologación aprobada exitosamente.{mensaje_adicional}"
+        try:
+            # Asegurarnos de que el documento se pueda serializar
+            serialized = serialize_doc(updated)
+            return serialized, f"Homologación aprobada exitosamente.{mensaje_adicional}"
+        except Exception as e:
+            # Manejar errores de serialización
+            print(f"Error al serializar el documento: {str(e)}")
+            return None, f"Error al procesar la respuesta: {str(e)}"
     
     @staticmethod
     def rechazar_homologacion(id_resultado, motivo, rechazado_por=None):

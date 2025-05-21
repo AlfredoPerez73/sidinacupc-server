@@ -192,18 +192,25 @@ def aprobar_homologacion(current_user, id_resultado):
         
         observaciones = data.get('observaciones')
         
+        # Llamamos al servicio que ya actualiza la BD
         updated, mensaje = ResultadoService.aprobar_homologacion(id_resultado, current_user['nombre'], observaciones)
         
         if not updated:
             return jsonify({'message': mensaje}), 404
         
+        # Si todo fue bien, devolvemos un mensaje de éxito simple
+        # sin necesidad de incluir todo el objeto resultado que puede causar problemas
         return jsonify({
             'message': mensaje,
-            'resultado': updated
-        })
+            'success': True,
+            'id_resultado': id_resultado
+        }), 200
+        
     except Exception as e:
         # Registrar el error para diagnóstico
+        import traceback
         print(f"Error al aprobar homologación: {str(e)}")
+        traceback.print_exc()
         return jsonify({'message': f'Error en el servidor: {str(e)}'}), 500
 
 @resultados_bp.route('/<id_resultado>/rechazar', methods=['PUT'])

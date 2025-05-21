@@ -301,6 +301,7 @@ def upload_documento(current_user, id_solicitud):
     if file and allowed_file(file.filename):
         # Generar nombre único para el archivo
         filename = str(uuid.uuid4()) + '_' + secure_filename(file.filename)
+        os.makedirs(current_app.config['UPLOAD_FOLDER'], exist_ok=True)
         file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
         
         file.save(file_path)

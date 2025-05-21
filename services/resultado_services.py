@@ -259,7 +259,7 @@ class ResultadoService:
             # Actualizar la homologación en la base de datos directamente
             update_data = {
                 'estado_homologacion': 'aprobada',
-                'fecha_actualizacion': datetime.utcnow()
+                'fecha_actualizacion': datetime.datetime.utcnow()
             }
             
             if aprobado_por:

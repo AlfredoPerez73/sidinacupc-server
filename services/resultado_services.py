@@ -1,8 +1,10 @@
+import datetime
+from bson import ObjectId
 import pandas as pd
 from models.resultado import Resultado
 from models.solicitud import Solicitud
 from models.asignatura import Asignatura
-from db.db import serialize_doc
+from db.db import mongo, serialize_doc
 
 class ResultadoService:
     @staticmethod
@@ -229,60 +231,92 @@ class ResultadoService:
     @staticmethod
     def aprobar_homologacion(id_resultado, aprobado_por=None, observaciones=None):
         """Aprueba la homologación de una nota"""
-        # Verificar si existe el resultado
-        resultado = Resultado.get_by_id(id_resultado)
-        if not resultado:
-            return None, "Resultado no encontrado"
-        
         try:
-            # Verificar el tipo de dato del resultado y acceder correctamente
+            # Verificar si existe el resultado
+            resultado = Resultado.get_by_id(id_resultado)
+            if not resultado:
+                return None, "Resultado no encontrado"
+            
+            # Obtener el id_solicitud de manera segura
+            id_solicitud = None
             if isinstance(resultado, dict):
                 id_solicitud = str(resultado.get('id_solicitud'))
-            elif isinstance(resultado, tuple):
-                # Aquí necesitas saber el índice correcto donde se encuentra id_solicitud
-                # Por ejemplo, si es el primer elemento:
-                id_solicitud = str(resultado[0])  # Ajusta el índice según tu estructura
-            else:
-                # Si es un objeto con atributos
+            elif hasattr(resultado, 'id_solicitud'):
                 id_solicitud = str(resultado.id_solicitud)
+            else:
+                # Intentar encontrar el id_solicitud en los datos
+                try:
+                    # Si es un objeto bson o similar
+                    id_solicitud = str(resultado['id_solicitud'])
+                except:
+                    # Si todo falla, buscar en la BD directamente
+                    doc = mongo.db.resultados.find_one({'_id': ObjectId(id_resultado)})
+                    if doc and 'id_solicitud' in doc:
+                        id_solicitud = str(doc['id_solicitud'])
+                    else:
+                        return None, "No se pudo determinar la solicitud asociada al resultado"
             
-            # Llamar al método de la clase Resultado para actualizar la homologación
-            updated = Resultado.aprobar_homologacion(id_resultado, aprobado_por, observaciones)
+            # Actualizar la homologación en la base de datos directamente
+            update_data = {
+                'estado_homologacion': 'aprobada',
+                'fecha_actualizacion': datetime.utcnow()
+            }
+            
+            if aprobado_por:
+                update_data['registrado_por'] = aprobado_por
+                
+            if observaciones:
+                update_data['observaciones'] = observaciones
+            
+            # Actualizar el resultado directamente
+            mongo.db.resultados.update_one(
+                {'_id': ObjectId(id_resultado)},
+                {'$set': update_data}
+            )
             
             # Verificar si todos los resultados de la solicitud están homologados
-            todos_homologados = Resultado.verificar_todos_homologados(id_solicitud)
-            
-            mensaje_adicional = ""
-            if todos_homologados:
-                mensaje_adicional = " Todos los resultados de esta solicitud han sido homologados."
+            # Consulta directa a la base de datos
+            if id_solicitud:
+                resultados_pendientes = mongo.db.resultados.count_documents({
+                    'id_solicitud': ObjectId(id_solicitud),
+                    'estado_homologacion': {'$ne': 'aprobada'}
+                })
                 
-                # Actualizar el seguimiento y la solicitud
-                from services.seguimiento_services import SeguimientoService
-                seguimiento_obj = SeguimientoService.get_by_solicitud(id_solicitud)
+                todos_homologados = (resultados_pendientes == 0)
                 
-                if seguimiento_obj:
-                    # Acceder al id del seguimiento correctamente según su tipo
-                    if isinstance(seguimiento_obj, dict):
-                        id_seguimiento = str(seguimiento_obj.get('_id'))
-                    elif isinstance(seguimiento_obj, tuple):
-                        # Ajusta el índice según la estructura de tus datos
-                        id_seguimiento = str(seguimiento_obj[0])
-                    else:
-                        # Si es un objeto con atributos
-                        id_seguimiento = str(seguimiento_obj._id)
+                mensaje_adicional = ""
+                if todos_homologados:
+                    mensaje_adicional = " Todos los resultados de esta solicitud han sido homologados."
                     
-                    SeguimientoService.cambiar_estado(id_seguimiento, 'finalizado', 
-                                            "Intercambio finalizado con éxito")
+                    # Actualizar el estado de la solicitud
+                    mongo.db.solicitudes.update_one(
+                        {'_id': ObjectId(id_solicitud)},
+                        {'$set': {
+                            'estado_actual': 'finalizada',
+                            'observaciones': "Intercambio finalizado con éxito"
+                        }}
+                    )
+                    
+                    # Actualizar el seguimiento
+                    seguimiento = mongo.db.seguimientos.find_one({'id_solicitud': ObjectId(id_solicitud)})
+                    if seguimiento:
+                        mongo.db.seguimientos.update_one(
+                            {'_id': seguimiento['_id']},
+                            {'$set': {
+                                'estado': 'finalizado',
+                                'observaciones': "Intercambio finalizado con éxito"
+                            }}
+                        )
                 
-                Solicitud.update_estado(id_solicitud, 'finalizada', 
-                                    "Intercambio finalizado con éxito")
+                # Devolver éxito y mensaje
+                # No intentamos serializar el objeto completo para evitar problemas
+                return True, f"Homologación aprobada exitosamente.{mensaje_adicional}"
             
-            # Asegurarnos de que el documento se pueda serializar correctamente
-            return serialize_doc(updated), f"Homologación aprobada exitosamente.{mensaje_adicional}"
+            return True, "Homologación aprobada exitosamente."
             
         except Exception as e:
-            print(f"Error en aprobar_homologacion: {str(e)}")
             import traceback
+            print(f"Error en aprobar_homologacion: {str(e)}")
             traceback.print_exc()
             return None, f"Error en el servidor: {str(e)}"
     

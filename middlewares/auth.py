@@ -19,27 +19,28 @@ def generate_token(user_id):
     )
 
 def token_required(f):
-    """Decorador para verificar token JWT"""
     @wraps(f)
     def decorated(*args, **kwargs):
-        token = request.cookies.get('auth_token')
+        token = None
         
-        if not token:
-            return jsonify({'message': 'Token no proporcionado'}), 401
-        
+        # Primero, intenta extraerlo desde el header Authorization
         if 'Authorization' in request.headers:
             auth_header = request.headers['Authorization']
             try:
-                token = auth_header.split(" ")[1]
+                token = auth_header.split(' ')[1]
             except IndexError:
-                return jsonify({'message': 'Token inválido'}), 401
+                return jsonify({'message': 'Token mal formado'}), 401
+        
+        # Si no está en el header, intenta desde la cookie (opcional)
+        if not token:
+            token = request.cookies.get('auth_token')
         
         if not token:
             return jsonify({'message': 'Token no proporcionado'}), 401
         
         try:
             payload = jwt.decode(
-                token, 
+                token,
                 current_app.config.get('JWT_SECRET_KEY'),
                 algorithms=['HS256']
             )
@@ -48,12 +49,12 @@ def token_required(f):
             
             if not current_user:
                 return jsonify({'message': 'Usuario no encontrado'}), 401
-            
+                
         except jwt.ExpiredSignatureError:
             return jsonify({'message': 'Token expirado'}), 401
-        except (jwt.InvalidTokenError, Exception) as e:
-            return jsonify({'message': f'Token inválido: {str(e)}'}), 401
-            
+        except jwt.InvalidTokenError:
+            return jsonify({'message': 'Token inválido'}), 401
+        
         return f(current_user, *args, **kwargs)
     
     return decorated

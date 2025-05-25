@@ -48,7 +48,7 @@ def importar_csv(current_user):
                 'data': None
             }), 400
         
-        file = request.files['file']
+        file = request.files['docentes']
         
         if file.filename == '':
             return jsonify({

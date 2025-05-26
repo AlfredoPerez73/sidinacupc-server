@@ -38,46 +38,32 @@ def crear_docente(current_user):
 
 @docente_bp.route('/importar', methods=['POST'])
 @token_required
-def importar_csv(current_user):
-    """Endpoint para importar docentes desde CSV"""
-    try:
-        if 'file' not in request.files:
-            return jsonify({
-                'success': False,
-                'message': 'No se proporcionó archivo',
-                'data': None
-            }), 400
-        
-        file = request.files['docentes']
-        
-        if file.filename == '':
-            return jsonify({
-                'success': False,
-                'message': 'No se seleccionó archivo',
-                'data': None
-            }), 400
-        
-        if not file.filename.endswith('.csv'):
-            return jsonify({
-                'success': False,
-                'message': 'El archivo debe ser de formato CSV',
-                'data': None
-            }), 400
-        
-        result = DocenteService.importar_csv(file)
-        
-        if result['success']:
-            return jsonify(result), 200
-        else:
-            return jsonify(result), 400
-            
-    except Exception as e:
-        logger.error(f"Error en endpoint importar_csv: {str(e)}")
-        return jsonify({
-            'success': False,
-            'message': 'Error interno del servidor',
-            'data': None
-        }), 500
+def importar_docentes(current_user):
+    # Verificar permisos (solo administradores)
+    if current_user['rol'] != 'admin':
+        return jsonify({'message': 'No tiene permisos para realizar esta acción'}), 403
+    
+    # Verificar archivo
+    if 'file' not in request.files:
+        return jsonify({'message': 'No se encontró el archivo'}), 400
+    
+    file = request.files['file']
+    
+    if file.filename == '' or not file.filename.endswith('.csv'):
+        return jsonify({'message': 'Archivo no válido. Debe ser un CSV'}), 400
+    
+    # Procesar archivo
+    result, message = DocenteService.importar_csv(file)
+    
+    if not result:
+        return jsonify({'message': message}), 400
+    
+    return jsonify({
+        'message': message,
+        'total_importados': result['total_importados'],
+        'estudiantes_creados': result['estudiantes_creados'],
+        'errores': result['errores']
+    })
 
 @docente_bp.route('/', methods=['GET'])
 @token_required

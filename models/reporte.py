@@ -82,18 +82,40 @@ class Reporte:
     
     @staticmethod
     def generar_estadisticas_por_facultad():
-        """Genera estadísticas de solicitudes por facultad"""
-        # Este es un caso más complejo que requiere un lookup para relacionar con estudiantes
         pipeline = [
+            # Añadir información de debug
+            {
+                '$addFields': {
+                    'debug_id_estudiante': '$id_estudiante'
+                }
+            },
             {
                 '$lookup': {
                     'from': 'estudiantes',
-                    'localField': 'id_estudiante',
+                    'localField': 'id_estudiante', 
                     'foreignField': '_id',
                     'as': 'estudiante'
                 }
             },
+            # Verificar si el lookup funcionó
+            {
+                '$addFields': {
+                    'estudiante_encontrado': {'$size': '$estudiante'}
+                }
+            },
+            # Solo proceder si encontramos el estudiante
+            {
+                '$match': {
+                    'estudiante_encontrado': {'$gt': 0}
+                }
+            },
             {'$unwind': '$estudiante'},
+            # Verificar que tenga facultad
+            {
+                '$match': {
+                    'estudiante.facultad': {'$exists': True, '$ne': None, '$ne': ''}
+                }
+            },
             {
                 '$group': {
                     '_id': '$estudiante.facultad',

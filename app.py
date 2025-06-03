@@ -21,7 +21,7 @@ def create_app():
     # Inicializar CORS
     CORS(app, resources={
         r"/api/*": {
-            "origins": ["http://localhost:5000", "http://localhost:5173", "https://sidinalupc.vercel.app/"],  # Ajusta según tus puertos
+            "origins": ["http://localhost:5000", "http://localhost:5173", "https://sidinalupc.vercel.app"],  # Ajusta según tus puertos
             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
             "allow_headers": ["Content-Type", "Authorization"],
             "supports_credentials": True  # Esto es importante para credenciales
